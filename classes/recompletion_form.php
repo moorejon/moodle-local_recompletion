@@ -126,6 +126,25 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->hideIf('archivequizdata', 'quizdata', 'noteq', LOCAL_RECOMPLETION_DELETE);
         $mform->hideIf('archivescormdata', 'scormdata', 'notchecked');
 
+        // Customcert.
+        if ($plugininfo = \core_plugin_manager::instance()->get_plugin_info('mod_customcert')) {
+            $cba = array();
+            $cba[] = $mform->createElement('radio', 'customcertdata', '',
+                get_string('donothing', 'local_recompletion'), LOCAL_RECOMPLETION_NOTHING);
+            $cba[] = $mform->createElement('radio', 'customcertdata', '',
+                get_string('delete', 'local_recompletion'), LOCAL_RECOMPLETION_DELETE);
+
+            $mform->addGroup($cba, 'customcert', get_string('customcert', 'local_recompletion'), array(' '), false);
+            $mform->addHelpButton('customcert', 'customcert', 'local_recompletion');
+
+            $mform->addElement('checkbox', 'archivecustomcertdata',
+                get_string('archive', 'local_recompletion'));
+
+            $mform->disabledIf('customcertdata', 'enable', 'notchecked');
+            $mform->disabledIf('archivecustomcertdata', 'enable', 'notchecked');
+            $mform->hideIf('archivecustomcertdata', 'customcertdata', 'notchecked');
+        }
+
         // Add common action buttons.
         $this->add_action_buttons();
 

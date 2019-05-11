@@ -49,6 +49,7 @@ class restore_local_recompletion_plugin extends restore_local_plugin {
         $paths[] = new restore_path_element('recompletion_qa', $elepath.'/quizattempts/attempt');
         $paths[] = new restore_path_element('recompletion_qg', $elepath.'/quizgrades/grade');
         $paths[] = new restore_path_element('recompletion_sst', $elepath.'/scormtracks/sco_track');
+        $paths[] = new restore_path_element('recompletion_ccert', $elepath.'/customcerts/customcert');
 
         return $paths;
     }
@@ -150,6 +151,19 @@ class restore_local_recompletion_plugin extends restore_local_plugin {
 
         $DB->insert_record('local_recompletion_sst', $data);
     }
+    /**
+     * Process local_recompletion_ccert table.
+     * @param stdClass $data
+     */
+    public function process_recompletion_ccert($data) {
+        global $DB;
+
+        $data = (object) $data;
+        $data->course = $this->task->get_courseid();
+        $data->userid = $this->get_mappingid('user', $data->userid);
+
+        $DB->insert_record('local_recompletion_ccert', $data);
+    }
 
     /**
      * We call the after restore_course to update the coursemodule ids we didn't know when creating.
@@ -170,6 +184,13 @@ class restore_local_recompletion_plugin extends restore_local_plugin {
             $rc->scormid = $this->get_mappingid('scorm', $rc->scormid);
             $rc->scoid = $this->get_mappingid('scorm_sco', $rc->scoid);
             $DB->update_record('local_recompletion_sst', $rc);
+        }
+
+        // Fix Custom Certificates.
+        $rcm = $DB->get_recordset('local_recompletion_ccert', array('course' => $this->task->get_courseid()));
+        foreach ($rcm as $rc) {
+            $rc->customcertid = $this->get_mappingid('customcert', $rc->customcertid);
+            $DB->update_record('local_recompletion_ccert', $rc);
         }
         $rcm->close();
 

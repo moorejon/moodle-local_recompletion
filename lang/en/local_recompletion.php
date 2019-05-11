@@ -115,3 +115,5 @@ $string['privacy:metadata:viewed'] = 'If the activity was viewed';
 $string['privacy:metadata:attempt'] = 'The attempt number';
 $string['privacy:metadata:scorm_scoes_track'] = 'Archive of the tracked data of the SCOes belonging to the activity';
 $string['noassigngradepermission'] = 'Your completion was reset, but this course contains an assignment that could not be reset, please ask your teacher to do this for you if required.';
+$string['customcert'] = 'Custom certificate';
+$string['customcert_help'] = 'Should existing Custom certificates be deleted - if archive is selected, the old certificates will be archived in the local_recompletion_ccert table.';

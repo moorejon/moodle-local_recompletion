@@ -332,5 +332,34 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2018071902, 'local', 'recompletion');
     }
 
+    if ($oldversion < 2019051000) {
+
+        // Define table local_recompletion_ccert to be created.
+        $table = new xmldb_table('local_recompletion_ccert');
+
+        // Adding fields to table local_recompletion_ccert.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('customcertid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('code', XMLDB_TYPE_CHAR, '40', null, null, null, null);
+        $table->add_field('emailed', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('course', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table local_recompletion_ccert.
+        $table->add_key('id', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Adding indexes to table local_recompletion_ccert.
+        $table->add_index('mdl_custissu_cus_ix', XMLDB_INDEX_NOTUNIQUE, ['customcertid']);
+
+        // Conditionally launch create table for local_recompletion_ccert.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2019051000, 'local', 'recompletion');
+    }
+
     return true;
 }

@@ -132,6 +132,21 @@ class backup_local_recompletion_plugin extends backup_local_plugin {
         }
         $scotrack->annotate_ids('user', 'userid');
 
+        // Now deal with Custom Certificate archive tables.
+        $customcerts = new backup_nested_element('customcerts');
+
+        $customcert = new backup_nested_element('customcert', array('id'), array(
+            'userid', 'customcertid', 'code', 'emailed',
+            'timecreated', 'course'));
+
+        $recompletion->add_child($customcerts);
+        $customcerts->add_child($customcert);
+
+        if ($usercompletion) {
+            $customcert->set_source_table('local_recompletion_ccert', array('course' => backup::VAR_COURSEID));
+        }
+        $customcert->annotate_ids('user', 'userid');
+
         return $plugin;
     }
 

@@ -152,6 +152,32 @@ class check_recompletion extends \core\task\scheduled_task {
     }
 
     /**
+     * Reset and archive certificate records.
+     * @param \stdclass $userid - user id
+     * @param \stdClass $course - course record.
+     * @param \stdClass $config - recompletion config.
+     */
+    protected function reset_customcert($userid, $course, $config) {
+        global $DB;
+
+        if (empty($config->customcertdata)) {
+            return;
+        } else if ($config->archivecustomcertdata == LOCAL_RECOMPLETION_DELETE) {
+            $params = array('userid' => $userid, 'course' => $course->id);
+            $selectsql = 'userid = ? AND customcertid IN (SELECT id FROM {customcert} WHERE course = ?)';
+            if ($config->archivecustomcertdata) {
+                $issuedcustomcerts = $DB->get_records_select('customcert_issues', $selectsql, $params);
+                foreach ($issuedcustomcerts as $sid => $unused) {
+                    // Add courseid to records to help with restore process.
+                    $issuedcustomcerts[$sid]->course = $course->id;
+                }
+                $DB->insert_records('local_recompletion_ccert', $issuedcustomcerts);
+            }
+            $DB->delete_records_select('customcert_issues', $selectsql, $params);
+        }
+    }
+
+    /**
      * Reset and archive quiz records.
      * @param \int $userid - userid
      * @param \stdclass $course - course record.
@@ -356,6 +382,9 @@ class check_recompletion extends \core\task\scheduled_task {
         $this->reset_quiz($userid, $course, $config);
         $this->reset_scorm($userid, $course, $config);
         $errors = $this->reset_assign($userid, $course, $config);
+        if ($plugininfo = \core_plugin_manager::instance()->get_plugin_info('mod_customcert')) {
+            $this->reset_customcert($userid, $course, $config);
+        }
 
         // Now notify user.
         $this->notify_user($userid, $course, $config);

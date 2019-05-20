@@ -91,6 +91,8 @@ class check_recompletion extends \core\task\scheduled_task {
             }
             $this->reset_user($user->userid, $course, $config);
         }
+
+        $this->remind_users();
     }
 
     /**
@@ -412,5 +414,140 @@ class check_recompletion extends \core\task\scheduled_task {
             }
         }
         return $errors;
+    }
+
+    /**
+     * @return bool|void
+     * @throws \dml_exception
+     */
+    public function remind_users() {
+        global $CFG, $DB;
+
+        $time = time();
+        // Check notification hour.
+        $notifylast = get_config('local_recompletion', 'notifylast');
+        $expirynotifyhour = 0;
+        $notifytime = usergetmidnight($time, $CFG->timezone) + ($expirynotifyhour * 3600);
+
+        if ($notifylast > $notifytime) {
+            // Notifications were already sent today.
+            return;
+        } else if ($time < $notifytime) {
+            // Notifications will be sent after midnight.
+            return;
+        }
+        $sql = "SELECT cc.userid, cc.course, cc.timecompleted
+            FROM {course_completions} cc
+            JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'
+            JOIN {local_recompletion_config} r2 ON r2.course = cc.course AND r2.name = 'recompletionduration'
+            JOIN {local_recompletion_config} r3 ON r3.course = cc.course AND r3.name = 'notificationstart'
+            JOIN {course} c ON c.id = cc.course
+            WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND
+            (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
+        $users = $DB->get_recordset_sql($sql, array(time()));
+        $courses = array();
+        $configs = array();
+        foreach ($users as $user) {
+            if (!isset($courses[$user->course])) {
+                // Only get the course record for this course once.
+                $course = get_course($user->course);
+                $courses[$user->course] = $course;
+            } else {
+                $course = $courses[$user->course];
+            }
+
+            // Get recompletion config.
+            if (!isset($configs[$user->course])) {
+                // Only get the recompletion config record for this course once.
+                $config = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, value');
+                $config = (object) $config;
+                $configs[$user->course] = $config;
+            } else {
+                $config = $configs[$user->course];
+            }
+
+            // Don't send notification for same day recompletions.
+            if ($config->recompletionduration < 86400 || $config->notificationstart < 86400 || $config->frequency < 86400) {
+                continue;
+            }
+
+            $frequencyday = floor($config->frequency / 86400);
+            $daysfterreminderstarts = floor(($time - ($user->timecompleted + $config->recompletionduration - $config->notificationstart)) / 86400);
+
+            if ($daysfterreminderstarts < 0) {
+                continue;
+            }
+
+            if ($daysfterreminderstarts % $frequencyday == 0) {
+                $this->remind_user($user->userid, $course, $config);
+            }
+        }
+
+        set_config('notifylast', $time, 'local_recompletion');
+
+        return true;
+    }
+
+    /**
+     * Notify user before recompletion.
+     * @param \int $userid - user id
+     * @param \stdclass $course - record from course table.
+     * @param \stdClass $config - recompletion config.
+     */
+    protected function remind_user($userid, $course, $config) {
+        global $DB, $CFG;
+
+        if (!$config->recompletionemailenable) {
+            return;
+        }
+
+        $userrecord = $DB->get_record('user', array('id' => $userid));
+        $context = \context_course::instance($course->id);
+        $from = get_admin();
+        $a = new \stdClass();
+        $a->coursename = format_string($course->fullname, true, array('context' => $context));
+        $a->profileurl = "$CFG->wwwroot/user/view.php?id=$userrecord->id&course=$course->id";
+        $a->link = course_get_url($course)->out();
+        if (trim($config->recompletionreminderbody) !== '') {
+            $message = $config->recompletionreminderbody;
+            $key = array('{$a->coursename}', '{$a->profileurl}', '{$a->link}', '{$a->fullname}', '{$a->email}');
+            $value = array($a->coursename, $a->profileurl, $a->link, fullname($userrecord), $userrecord->email);
+            $message = str_replace($key, $value, $message);
+            if (strpos($message, '<') === false) {
+                // Plain text only.
+                $messagetext = $message;
+                $messagehtml = text_to_html($messagetext, null, false, true);
+            } else {
+                // This is most probably the tag/newline soup known as FORMAT_MOODLE.
+                $messagehtml = format_text($message, FORMAT_MOODLE, array('context' => $context,
+                    'para' => false, 'newlines' => true, 'filter' => true));
+                $messagetext = html_to_text($messagehtml);
+            }
+        } else {
+            $messagetext = get_string('recompletionreminderdefaultbody', 'local_recompletion', $a);
+            $messagehtml = text_to_html($messagetext, null, false, true);
+        }
+        if (trim($config->recompletionremindersubject) !== '') {
+            $subject = $config->recompletionremindersubject;
+            $keysub = array('{$a->coursename}', '{$a->fullname}');
+            $valuesub = array($a->coursename, fullname($userrecord));
+            $subject = str_replace($keysub, $valuesub, $subject);
+        } else {
+            $subject = get_string('recompletionreminderdefaultsubject', 'local_recompletion', $a);
+        }
+        // Directly emailing recompletion message rather than using messaging.
+        if (email_to_user($userrecord, $from, $subject, $messagetext, $messagehtml)) {
+            // Trigger event for this user.
+            $context = \context_course::instance($course->id);
+            $event = \local_recompletion\event\reminder_sent::create(
+                array(
+                    'objectid'      => $course->id,
+                    'relateduserid' => $userid,
+                    'courseid' => $course->id,
+                    'context' => $context,
+                )
+            );
+            $event->trigger();
+        }
     }
 }

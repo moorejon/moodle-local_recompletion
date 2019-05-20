@@ -52,6 +52,14 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->addHelpButton('recompletionemailenable', 'recompletionemailenable', 'local_recompletion');
         $mform->disabledIf('recompletionemailenable', 'enable', 'notchecked');
 
+        $mform->addElement('duration', 'notificationstart', get_string('notificationstart', 'local_recompletion'), $options);
+        $mform->addHelpButton('notificationstart', 'notificationstart', 'local_recompletion');
+        $mform->disabledIf('notificationstart', 'enable', 'notchecked');
+
+        $mform->addElement('duration', 'frequency', get_string('frequency', 'local_recompletion'), $options);
+        $mform->addHelpButton('frequency', 'frequency', 'local_recompletion');
+        $mform->disabledIf('frequency', 'enable', 'notchecked');
+
         // Email Notification settings.
         $mform->addElement('header', 'emailheader', get_string('emailrecompletiontitle', 'local_recompletion'));
         $mform->setExpanded('emailheader', false);
@@ -67,6 +75,20 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->addHelpButton('recompletionemailbody', 'recompletionemailbody', 'local_recompletion');
         $mform->disabledIf('recompletionemailbody', 'enable', 'notchecked');
         $mform->disabledIf('recompletionemailbody', 'recompletionemailenable', 'notchecked');
+
+        // Reminder email setting.
+        $mform->addElement('text', 'recompletionremindersubject', get_string('recompletionremindersubject', 'local_recompletion'),
+            'size = "80"');
+        $mform->setType('recompletionremindersubject', PARAM_RAW);
+        $mform->addHelpButton('recompletionremindersubject', 'recompletionremindersubject', 'local_recompletion');
+        $mform->disabledIf('recompletionremindersubject', 'enable', 'notchecked');
+        $mform->disabledIf('recompletionremindersubject', 'recompletionemailenable', 'notchecked');
+        $options = array('cols' => '60', 'rows' => '8');
+        $mform->addElement('textarea', 'recompletionreminderbody', get_string('recompletionreminderbody', 'local_recompletion'),
+            $options);
+        $mform->addHelpButton('recompletionreminderbody', 'recompletionreminderbody', 'local_recompletion');
+        $mform->disabledIf('recompletionreminderbody', 'enable', 'notchecked');
+        $mform->disabledIf('recompletionreminderbody', 'recompletionemailenable', 'notchecked');
 
         // Advanced recompletion settings.
         // Delete data section.

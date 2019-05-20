@@ -117,3 +117,27 @@ $string['privacy:metadata:scorm_scoes_track'] = 'Archive of the tracked data of 
 $string['noassigngradepermission'] = 'Your completion was reset, but this course contains an assignment that could not be reset, please ask your teacher to do this for you if required.';
 $string['customcert'] = 'Custom certificate';
 $string['customcert_help'] = 'Should existing Custom certificates be deleted - if archive is selected, the old certificates will be archived in the local_recompletion_ccert table.';
+$string['notificationstart'] = 'Notification start';
+$string['notificationstart_help'] = 'Eexample 2 weeks prior, 1 month prior, etc';
+$string['frequency'] = 'Frequency';
+$string['frequency_help'] = 'Example every week, every 2 weeks etc';
+$string['recompletionremindersubject'] = 'Recompletion reminder subject';
+$string['recompletionremindersubject_help'] = 'A custom recompletion email subject may be added as plain text
+
+The following placeholders may be included in the message:
+
+* Course name {$a->coursename}
+* User fullname {$a->fullname}';
+$string['recompletionreminderdefaultsubject'] = 'Course {$a->coursename} recompletion required';
+$string['recompletionreminderbody'] = 'Recompletion reminder message body';
+$string['recompletionreminderbody_help'] = 'A custom recompletion email subject may be added as plain text or Moodle-auto format, including HTML tags and multi-lang tags
+
+The following placeholders may be included in the message:
+
+* Course name {$a->coursename}
+* Link to course {$a->link}
+* Link to user\'s profile page {$a->profileurl}
+* User email {$a->email}
+* User fullname {$a->fullname}';
+$string['recompletionreminderdefaultbody'] = 'Hi there, you will need to recomplete the course {$a->coursename} {$a->link} soon';
+$string['eventrecompletionreminder'] = 'Course recompletion reminder';

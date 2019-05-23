@@ -174,4 +174,23 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->addElement('hidden', 'course', $course->id);
         $mform->setType('course', PARAM_INT);
     }
+
+    /**
+     * Form validation.
+     */
+    public function validation($data, $files) {
+
+        $errors = array();
+
+        if (isset($data['enable'])) {
+            if ($data['recompletionduration'] < $data['notificationstart']) {
+                $errors['notificationstart'] = get_string('errorgreaterperiod', 'local_recompletion');
+            }
+            if ($data['recompletionduration'] < $data['frequency']) {
+                $errors['frequency'] = get_string('errorgreaterperiod', 'local_recompletion');
+            }
+        }
+
+        return $errors;
+    }
 }

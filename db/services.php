@@ -15,17 +15,22 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version details.
+ * Web service functions for recompletion plugin.
  *
  * @package    local_recompletion
- * @copyright  2017 Dan Marsden
+ * @copyright  2019 Michael Gardener <mgardener@cissq.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die;
 
-$plugin->version   = 2019053001;
-$plugin->release   = '1.7';
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->requires  = 2017102700; // Requires 3.4.
-$plugin->component = 'local_recompletion';
+$functions = array(
+    'local_recompletion_get_course_completions' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'get_course_completions',
+        'description'   => 'Returns course completions',
+        'type'          => 'read',
+        'ajax' => true,
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+);

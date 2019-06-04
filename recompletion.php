@@ -63,6 +63,19 @@ $PAGE->set_title($course->shortname);
 $PAGE->set_heading($course->fullname);
 $PAGE->set_pagelayout('admin');
 
+$PAGE->requires->js_amd_inline("
+        require(['jquery'], function($) {    
+            $('#id_recompletionduration_timeunit option[value=1]').remove();
+            $('#id_recompletionduration_timeunit option[value=60]').remove();
+            $('#id_recompletionduration_timeunit option[value=3600]').remove();            
+            $('#id_notificationstart_timeunit option[value=1]').remove();
+            $('#id_notificationstart_timeunit option[value=60]').remove();
+            $('#id_notificationstart_timeunit option[value=3600]').remove();            
+            $('#id_frequency_timeunit option[value=1]').remove();
+            $('#id_frequency_timeunit option[value=60]').remove();
+            $('#id_frequency_timeunit option[value=3600]').remove();            
+        });");
+
 // This seems a bit messy - would be nice to tidy this up a bit.
 $config = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, value');
 $idmap = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, id');

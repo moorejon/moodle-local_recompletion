@@ -154,8 +154,6 @@ class local_recompletion_external extends external_api {
         );
     }
 
-
-
     /**
      * Returns description of update_course_settings() parameters.
      *

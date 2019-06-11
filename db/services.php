@@ -65,4 +65,20 @@ $functions = array(
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
         'ajax'          => true,
     ),
+    'local_recompletion_get_course_settings' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'get_course_settings',
+        'description'   => 'Get course recompletion settings',
+        'type'          => 'read',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
+    'local_recompletion_get_recompletions' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'get_recompletions',
+        'description'   => 'Get course recompletions',
+        'type'          => 'read',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
 );

@@ -154,6 +154,7 @@ class local_recompletion_external extends external_api {
         );
     }
 
+
     /**
      * Returns description of update_course_settings() parameters.
      *
@@ -271,7 +272,6 @@ class local_recompletion_external extends external_api {
     }
 
 
-
     /**
      * Returns description of create_completion() parameters.
      *
@@ -344,7 +344,6 @@ class local_recompletion_external extends external_api {
     }
 
 
-
     /**
      * Returns description of update_completion() parameters.
      *
@@ -409,7 +408,6 @@ class local_recompletion_external extends external_api {
     }
 
 
-
     /**
      * Returns description of delete_completion() parameters.
      *
@@ -458,5 +456,160 @@ class local_recompletion_external extends external_api {
      */
     public static function delete_completion_returns() {
         return new external_value(PARAM_BOOL, 'True if the update was successful.');
+    }
+
+
+    /**
+     * Returns description of get_course_settings() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function get_course_settings_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'Course ID'),
+            )
+        );
+    }
+
+    /**
+     * Get course settings
+     *
+     * @param int $courseid the course id
+     * @throws moodle_exception
+     */
+    public static function get_course_settings($courseid) {
+        global $DB;
+
+        // Validate params
+        $params = self::validate_parameters(self::get_course_settings_parameters(), ['courseid' => $courseid]);
+
+        $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
+            'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
+            'assigndata', 'customcertdata', 'archivecustomcertdata', 'notificationstart', 'frequency', 'recompletionremindersubject',
+            'recompletionreminderbody');
+
+        $context = context_course::instance($params['courseid']);
+        self::validate_context($context);
+
+        if (!has_capability('local/recompletion:manage', $context)) {
+            return false;
+        }
+
+        $settings = array();
+        foreach ($setnames as $setname) {
+            $settings[$setname] = $DB->get_field('local_recompletion_config', 'value',
+                array('course' => $params['courseid'], 'name' => $setname)
+            );
+        }
+
+        return $settings;
+    }
+
+    /**
+     * Returns description of get_course_settings() result value.
+     *
+     * @return \external_value
+     */
+    public static function get_course_settings_returns() {
+        return new external_single_structure(
+            array(
+                'enable' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'recompletionduration' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'deletegradedata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'quizdata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'scormdata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'archivecompletiondata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'archivequizdata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'archivescormdata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'recompletionemailenable' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'recompletionemailsubject' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
+                'recompletionemailbody' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
+                'assigndata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'customcertdata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'archivecustomcertdata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'notificationstart' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'frequency' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'recompletionremindersubject' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
+                'recompletionreminderbody' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL)
+            )
+        );
+    }
+
+
+    /**
+     * Returns description of get_recompletions() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function get_recompletions_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'Course ID', VALUE_REQUIRED),
+                'userid' => new external_value(PARAM_INT, 'User ID', VALUE_OPTIONAL)
+
+            )
+        );
+    }
+
+    /**
+     * Get course recompletions
+     *
+     * @param int $courseid the course id
+     * @throws moodle_exception
+     */
+    public static function get_recompletions($courseid, $userid=0) {
+        global $DB;
+
+        // Validate params
+        $params = self::validate_parameters(self::get_recompletions_parameters(), ['courseid' => $courseid, 'userid' => $userid]);
+
+        $context = context_course::instance($params['courseid']);
+        self::validate_context($context);
+
+        if (!has_capability('local/recompletion:manage', $context)) {
+            return false;
+        }
+
+        if ($params['userid']) {
+            $rs = $DB->get_recordset('local_recompletion_cc', array('course' => $params['courseid'], 'userid' => $params['userid']));
+        } else {
+            $rs = $DB->get_recordset('local_recompletion_cc', array('course' => $params['courseid']));
+        }
+
+        $return = array();
+
+        foreach ($rs as $recompletion) {
+            $return['completions'][] = (array) $recompletion;
+        }
+
+        $rs->close();
+
+        return $return;
+    }
+
+    /**
+     * Returns description of get_recompletions() result value.
+     *
+     * @return \external_value
+     */
+    public static function get_recompletions_returns() {
+        return new external_single_structure(
+            array(
+                'completions'   => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'Record ID'),
+                            'userid' => new external_value(PARAM_INT, 'User ID'),
+                            'course' => new external_value(PARAM_INT, 'Course ID'),
+                            'timeenrolled' => new external_value(PARAM_INT, 'Timestamp for course enrolment'),
+                            'timestarted' => new external_value(PARAM_INT, 'Timestamp for course star'),
+                            'timecompleted' => new external_value(PARAM_INT, 'Timestamp for course completetion'),
+                            'reaggregate' => new external_value(PARAM_INT, 'Timestamp for course reaggregate')
+                        )
+                    )
+                )
+            )
+        );
     }
 }

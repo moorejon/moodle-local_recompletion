@@ -291,7 +291,7 @@ class local_recompletion_external extends external_api {
     }
 
     /**
-     * Update the course competency settings
+     * Create recompletion
      *
      * @param int $userid the user id
      * @param int $course the course id
@@ -610,5 +610,193 @@ class local_recompletion_external extends external_api {
                 )
             )
         );
+    }
+
+
+    /**
+     * Returns description of create_core_completion() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function create_core_completion_parameters() {
+        return new external_function_parameters(
+            array(
+                'userid' => new external_value(PARAM_INT, '', VALUE_REQUIRED),
+                'course' => new external_value(PARAM_INT, '', VALUE_REQUIRED),
+                'timecompleted' => new external_value(PARAM_INT, '', VALUE_REQUIRED),
+                'timeenrolled' => new external_value(PARAM_INT, '', VALUE_DEFAULT, 0),
+                'timestarted' => new external_value(PARAM_INT, '', VALUE_DEFAULT, 0),
+                'reaggregate' => new external_value(PARAM_INT, '', VALUE_DEFAULT, 0),
+            )
+        );
+    }
+
+    /**
+     * Create course completion
+     *
+     * @param int $userid the user id
+     * @param int $course the course id
+     * @param int $timecompleted
+     * @param int $timeenrolled
+     * @param int $timestarted
+     * @param int $reaggregate
+     * @throws moodle_exception
+     */
+    public static function create_core_completion($userid, $course, $timecompleted, $timeenrolled = 0, $timestarted = 0, $reaggregate = 0) {
+        global $DB;
+        $params = self::validate_parameters(self::create_core_completion_parameters(), array(
+            'userid' => $userid,
+            'course' => $course,
+            'timecompleted' => $timecompleted,
+            'timeenrolled' => $timeenrolled,
+            'timestarted' => $timestarted,
+            'reaggregate' => $reaggregate
+        ));
+
+        $context = context_course::instance($params['course']);
+        self::validate_context($context);
+
+        if (!has_capability('local/recompletion:manage', $context)) {
+            return false;
+        }
+
+        $comp = new \stdClass();
+        $comp->userid = $params['userid'];
+        $comp->course = $params['course'];
+        $comp->timecompleted = $params['timecompleted'];
+        $comp->timeenrolled = $params['timeenrolled'];
+        $comp->timestarted = $params['timestarted'];
+        $comp->reaggregate = $params['reaggregate'];
+
+        if ($DB->insert_record('course_completions', $comp)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Returns description of create_core_completion() result value.
+     *
+     * @return \external_value
+     */
+    public static function create_core_completion_returns() {
+        return new external_value(PARAM_BOOL, 'True if the update was successful.');
+    }
+
+
+    /**
+     * Returns description of update_core_completion() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function update_core_completion_parameters() {
+        return new external_function_parameters(
+            array(
+                'completions' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, '', VALUE_REQUIRED),
+                            'userid' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                            'course' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                            'timecompleted' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                            'timeenrolled' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                            'timestarted' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                            'reaggregate' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                        )
+                    )
+                )
+            )
+        );
+    }
+
+    /**
+     * Update course completion
+     *
+     * @param array $completions list of completions
+     * @throws moodle_exception
+     */
+    public static function update_core_completion($completions) {
+        global $DB;
+        $params = self::validate_parameters(self::update_core_completion_parameters(), array('completions' => $completions));
+
+        foreach ($params['completions'] as $data) {
+            if (!$corecompletion = $DB->get_record('course_completions', array('id' => $data['id']))) {
+                continue;
+            }
+
+            $context = context_course::instance($corecompletion->course);
+            self::validate_context($context);
+
+            if (!has_capability('local/recompletion:manage', $context)) {
+                continue;
+            }
+
+            if (!$DB->update_record('course_completions', (object)$data)) {
+                throw new moodle_exception('unknowncompletion');
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns description of update_core_completion() result value.
+     *
+     * @return \external_value
+     */
+    public static function update_core_completion_returns() {
+        return new external_value(PARAM_BOOL, 'True if the update was successful.');
+    }
+
+
+
+    /**
+     * Returns description of delete_core_completion() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function delete_core_completion_parameters() {
+        return new external_function_parameters(
+            array(
+                'completionid' => new external_value(PARAM_INT, 'ID of Recompletion record'),
+            )
+        );
+    }
+
+    /**
+     * Delete course completion
+     *
+     * @param int $completionid the course recommpletion id
+     * @throws moodle_exception
+     */
+    public static function delete_core_completion($completionid) {
+        global $DB;
+
+        // Validate params
+        $params = self::validate_parameters(self::delete_core_completion_parameters(), ['completionid' => $completionid]);
+
+        if (!$corecompletion = $DB->get_record('course_completions', array('id' => $params['completionid']))) {
+            throw new invalid_parameter_exception("Completion with id = $completionid does not exist");
+        }
+
+        $context = context_course::instance($corecompletion->course);
+        self::validate_context($context);
+        require_capability('local/recompletion:manage', $context);
+
+        if ($DB->delete_records('course_completions', array('id' => $params['completionid']))) {
+            return true;
+        } else {
+            return false;
+        }
+
+    }
+
+    /**
+     * Returns description of delete_core_completion() result value.
+     *
+     * @return \external_value
+     */
+    public static function delete_core_completion_returns() {
+        return new external_value(PARAM_BOOL, 'True if the update was successful.');
     }
 }

@@ -546,8 +546,7 @@ class local_recompletion_external extends external_api {
         return new external_function_parameters(
             array(
                 'courseid' => new external_value(PARAM_INT, 'Course ID', VALUE_REQUIRED),
-                'userid' => new external_value(PARAM_INT, 'User ID', VALUE_OPTIONAL)
-
+                'userid' => new external_value(PARAM_INT, 'User ID', VALUE_OPTIONAL, 0)
             )
         );
     }

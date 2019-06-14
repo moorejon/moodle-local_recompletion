@@ -81,4 +81,28 @@ $functions = array(
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
         'ajax'          => true,
     ),
+    'local_recompletion_create_core_completion' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'create_core_completion',
+        'description'   => 'Create the course recompletion',
+        'type'          => 'write',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
+    'local_recompletion_update_core_completion' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'update_core_completion',
+        'description'   => 'Update the course recompletion',
+        'type'          => 'write',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
+    'local_recompletion_delete_core_completion' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'delete_core_completion',
+        'description'   => 'Delete the course recompletion',
+        'type'          => 'write',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
 );

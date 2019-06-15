@@ -74,7 +74,13 @@ class local_recompletion_external extends external_api {
         $filter = array();
         $userparams = array();
         $courseparams = array();
+        $rawdata = array();
+        $return = array();
 
+        if (!$params['userids'] && !$params['courseids']) {
+            return $return;
+        }
+        
         if ($params['userids']) {
             list($userwhere, $userparams) = $DB->get_in_or_equal($params['userids'], SQL_PARAMS_NAMED, 'user');
             $filter[] = "comp.userid {$userwhere}";
@@ -89,9 +95,6 @@ class local_recompletion_external extends external_api {
                   UNION SELECT * FROM {local_recompletion_cc} lr) comp
                   WHERE ".implode(' AND ', $filter)."                 
                ORDER BY comp.timecompleted {$params['sort']}";
-
-        $rawdata = array();
-        $return = array();
 
         $rs = $DB->get_recordset_sql($sql, array_merge($userparams, $courseparams));
         foreach ($rs as $completion) {

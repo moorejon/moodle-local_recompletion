@@ -80,7 +80,7 @@ class local_recompletion_external extends external_api {
         if (!$params['userids'] && !$params['courseids']) {
             return $return;
         }
-        
+
         if ($params['userids']) {
             list($userwhere, $userparams) = $DB->get_in_or_equal($params['userids'], SQL_PARAMS_NAMED, 'user');
             $filter[] = "comp.userid {$userwhere}";
@@ -510,9 +510,10 @@ class local_recompletion_external extends external_api {
 
         $settings = array();
         foreach ($setnames as $setname) {
-            $settings[$setname] = $DB->get_field('local_recompletion_config', 'value',
-                array('course' => $params['courseid'], 'name' => $setname)
-            );
+            $settingvalue = $DB->get_field('local_recompletion_config', 'value', array('course' => $params['courseid'], 'name' => $setname));
+            if ($settingvalue !== false) {
+                $settings[$setname] = $settingvalue;
+            }
         }
 
         return $settings;

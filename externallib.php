@@ -589,7 +589,7 @@ class local_recompletion_external extends external_api {
             $rs = $DB->get_recordset('local_recompletion_cc', array('course' => $params['courseid']));
         }
 
-        $return = array();
+        $return = array('completions' => array());
 
         foreach ($rs as $recompletion) {
             $return['completions'][] = (array) $recompletion;

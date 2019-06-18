@@ -71,18 +71,30 @@ class local_recompletion_external extends external_api {
             array('userids' => $userids, 'courseids' => $courseids, 'sort' => $sort, 'limit' => $limit)
         );
 
-        list($userwhere, $userparams) = $DB->get_in_or_equal($params['userids'], SQL_PARAMS_NAMED, 'user');
-        list($coursewhere, $courseparams) = $DB->get_in_or_equal($params['courseids'], SQL_PARAMS_NAMED, 'cor');
+        $filter = array();
+        $userparams = array();
+        $courseparams = array();
+        $rawdata = array();
+        $return = array();
 
+        if (!$params['userids'] && !$params['courseids']) {
+            return $return;
+        }
+
+        if ($params['userids']) {
+            list($userwhere, $userparams) = $DB->get_in_or_equal($params['userids'], SQL_PARAMS_NAMED, 'user');
+            $filter[] = "comp.userid {$userwhere}";
+        }
+
+        if ($params['courseids']) {
+            list($coursewhere, $courseparams) = $DB->get_in_or_equal($params['courseids'], SQL_PARAMS_NAMED, 'cor');
+            $filter[] = "comp.course {$coursewhere}";
+        }
         $sql = "SELECT comp.*
                   FROM (SELECT * FROM {course_completions} cc WHERE cc.timecompleted > 0 
                   UNION SELECT * FROM {local_recompletion_cc} lr) comp
-                  WHERE comp.userid {$userwhere} 
-                    AND comp.course {$coursewhere}
+                  WHERE ".implode(' AND ', $filter)."                 
                ORDER BY comp.timecompleted {$params['sort']}";
-
-        $rawdata = array();
-        $return = array();
 
         $rs = $DB->get_recordset_sql($sql, array_merge($userparams, $courseparams));
         foreach ($rs as $completion) {
@@ -498,9 +510,10 @@ class local_recompletion_external extends external_api {
 
         $settings = array();
         foreach ($setnames as $setname) {
-            $settings[$setname] = $DB->get_field('local_recompletion_config', 'value',
-                array('course' => $params['courseid'], 'name' => $setname)
-            );
+            $settingvalue = $DB->get_field('local_recompletion_config', 'value', array('course' => $params['courseid'], 'name' => $setname));
+            if ($settingvalue !== false) {
+                $settings[$setname] = $settingvalue;
+            }
         }
 
         return $settings;
@@ -546,7 +559,7 @@ class local_recompletion_external extends external_api {
         return new external_function_parameters(
             array(
                 'courseid' => new external_value(PARAM_INT, 'Course ID', VALUE_REQUIRED),
-                'userid' => new external_value(PARAM_INT, 'User ID', VALUE_OPTIONAL, 0)
+                'userid' => new external_value(PARAM_INT, 'User ID', VALUE_DEFAULT, 0)
             )
         );
     }
@@ -557,7 +570,7 @@ class local_recompletion_external extends external_api {
      * @param int $courseid the course id
      * @throws moodle_exception
      */
-    public static function get_recompletions($courseid, $userid=0) {
+    public static function get_recompletions($courseid, $userid = 0) {
         global $DB;
 
         // Validate params

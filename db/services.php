@@ -105,4 +105,12 @@ $functions = array(
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
         'ajax'          => true,
     ),
+    'local_recompletion_get_core_course_completions' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'get_core_course_completions',
+        'description'   => 'Get records from the core course completion table',
+        'type'          => 'read',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
 );

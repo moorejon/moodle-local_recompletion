@@ -697,6 +697,83 @@ class local_recompletion_external extends external_api {
         return new external_value(PARAM_BOOL, 'True if the update was successful.');
     }
 
+    /**
+     * Returns description of get_core_course_completions() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function get_core_course_completions_parameters() {
+        return new external_function_parameters(
+            array(
+                'course' => new external_value(PARAM_INT, 'User ID', VALUE_REQUIRED),
+                'userid' => new external_value(PARAM_INT, 'Course ID', VALUE_DEFAULT, 0)
+            )
+        );
+    }
+
+    /**
+     * Get core course completions
+     *
+     * @param int $userid the user id
+     * @param int $course the course id
+     * @throws moodle_exception
+     */
+    public static function get_core_course_completions($course, $userid = 0) {
+        global $DB;
+        $params = self::validate_parameters(self::get_core_course_completions_parameters(), array(
+            'course' => $course,
+            'userid' => $userid
+        ));
+
+        $context = context_course::instance($params['course']);
+        self::validate_context($context);
+
+        if (!has_capability('local/recompletion:manage', $context)) {
+            return false;
+        }
+
+        if ($params['userid']) {
+            $rs = $DB->get_recordset('course_completions', array('course' => $params['course'], 'userid' => $params['userid']));
+        } else {
+            $rs = $DB->get_recordset('course_completions', array('course' => $params['course']));
+        }
+
+        $return = array('completions' => array());
+
+        foreach ($rs as $completion) {
+            $return['completions'][] = (array) $completion;
+        }
+
+        $rs->close();
+
+        return $return;
+    }
+
+    /**
+     * Returns description of get_core_course_completions() result value.
+     *
+     * @return \external_value
+     */
+    public static function get_core_course_completions_returns() {
+        return new external_single_structure(
+            array(
+                'completions'   => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'Record ID'),
+                            'userid' => new external_value(PARAM_INT, 'User ID'),
+                            'course' => new external_value(PARAM_INT, 'Course ID'),
+                            'timeenrolled' => new external_value(PARAM_INT, 'Timestamp for course enrolment'),
+                            'timestarted' => new external_value(PARAM_INT, 'Timestamp for course star'),
+                            'timecompleted' => new external_value(PARAM_INT, 'Timestamp for course completetion'),
+                            'reaggregate' => new external_value(PARAM_INT, 'Timestamp for course reaggregate')
+                        )
+                    )
+                )
+            )
+        );
+    }
+
 
     /**
      * Returns description of update_core_completion() parameters.

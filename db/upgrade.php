@@ -361,5 +361,28 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2019051000, 'local', 'recompletion');
     }
 
+    if ($oldversion < 2019062001) {
+
+        // Define table local_recompletion_equiv to be created.
+        $table = new xmldb_table('local_recompletion_equiv');
+
+        // Adding fields to table local_recompletion_equiv.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '11', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('courseoneid', XMLDB_TYPE_INTEGER, '11', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('coursetwoid', XMLDB_TYPE_INTEGER, '11', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table local_recompletion_equiv.
+        $table->add_key('id', XMLDB_KEY_PRIMARY, array('id'));
+        $table->add_key('mdl_locarecoconf_cou_ix', XMLDB_KEY_UNIQUE, array('courseoneid', 'coursetwoid'));
+
+        // Conditionally launch create table for local_recompletion_equiv.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2019062001, 'local', 'recompletion');
+    }
+
     return true;
 }

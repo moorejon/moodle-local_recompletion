@@ -105,11 +105,19 @@ $functions = array(
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
         'ajax'          => true,
     ),
-    'local_recompletion_get_core_course_completions' => array(
+    'local_recompletion_create_course_equivalent' => array(
         'classname'     => 'local_recompletion_external',
-        'methodname'    => 'get_core_course_completions',
-        'description'   => 'Get records from the core course completion table',
-        'type'          => 'read',
+        'methodname'    => 'create_course_equivalent',
+        'description'   => 'Create the course equivalent',
+        'type'          => 'write',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
+    'local_recompletion_delete_course_equivalent' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'delete_course_equivalent',
+        'description'   => 'Delete the course equivalent',
+        'type'          => 'write',
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
         'ajax'          => true,
     ),

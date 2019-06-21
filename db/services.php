@@ -121,4 +121,12 @@ $functions = array(
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
         'ajax'          => true,
     ),
+    'local_recompletion_get_course_equivalencies' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'get_course_equivalencies',
+        'description'   => 'Delete the course equivalent',
+        'type'          => 'read',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
 );

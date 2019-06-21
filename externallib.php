@@ -589,7 +589,7 @@ class local_recompletion_external extends external_api {
             $rs = $DB->get_recordset('local_recompletion_cc', array('course' => $params['courseid']));
         }
 
-        $return = array('completions' => array());
+        $return = array();
 
         foreach ($rs as $recompletion) {
             $return['completions'][] = (array) $recompletion;
@@ -839,7 +839,6 @@ class local_recompletion_external extends external_api {
     }
 
 
-
     /**
      * Returns description of delete_core_completion() parameters.
      *
@@ -928,7 +927,7 @@ class local_recompletion_external extends external_api {
             return false;
         }
 
-        if ($equivalents = \local_recompletion\helper::get_course_equivalents($params['courseoneid'])) {
+        if ($equivalents = \local_recompletion\helper::get_course_equivalencies($params['courseoneid'])) {
             if (in_array($params['coursetwoid'], array_keys($equivalents))) {
                 return true;
             }
@@ -1011,6 +1010,76 @@ class local_recompletion_external extends external_api {
      */
     public static function delete_course_equivalent_returns() {
         return new external_value(PARAM_BOOL, 'True if the update was successful.');
+    }
+
+    /**
+     * Returns description of get_course_equivalencies() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function get_course_equivalencies_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, '', VALUE_REQUIRED)
+            )
+        );
+    }
+
+    /**
+     * Get course equivalencies
+     *
+     * @param int $courseid the course id
+     * @throws moodle_exception
+     */
+    public static function get_course_equivalencies($courseid) {
+        global $DB;
+
+        $params = self::validate_parameters(self::get_course_equivalencies_parameters(), array(
+            'courseid' => $courseid
+        ));
+
+        $context = context_course::instance($params['courseid']);
+
+        self::validate_context($context);
+
+        if (!has_capability('local/recompletion:manage', $context)) {
+            return false;
+        }
+
+        if ($equivalents = \local_recompletion\helper::get_course_equivalencies($params['courseid'])) {
+            if (in_array($params['coursetwoid'], array_keys($equivalents))) {
+                return true;
+            }
+        }
+        $return = array();
+        foreach ($equivalents as $equivalent) {
+            if ($course = $DB->get_record('course', array('id' => $equivalent->courseid))) {
+                $return[] = [
+                    'id' => $course->id,
+                    'fullname' => $course->fullname,
+                    'shortname' => $course->shortname
+                ];
+            }
+        }
+
+        return $return;
+    }
+
+    /**
+     * Returns description of get_course_equivalencies() result value.
+     *
+     * @return \external_value
+     */
+    public static function get_course_equivalencies_returns() {
+        return new external_multiple_structure(
+            new external_single_structure(
+                array(
+                    'id' => new external_value(PARAM_INT, 'Course ID'),
+                    'fullname' => new external_value(PARAM_TEXT, 'Course fullname'),
+                    'shortname' => new external_value(PARAM_TEXT, 'Course shortname')
+                )
+            )
+        );
     }
 
 }

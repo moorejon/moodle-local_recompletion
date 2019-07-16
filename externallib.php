@@ -245,9 +245,19 @@ class local_recompletion_external extends external_api {
             } else {
                 $value = null;
             }
-            if (!is_null($value) && !isset($config[$name]) || $config[$name] <> $value) {
+            if ((!is_null($value) && $config[$name] <> $value) || !isset($config[$name])) {
                 if (in_array($name, $daybasedvariables)) {
                     $value = $value * 86400;
+                }
+                if (is_null($value)) {
+                    if ($name == 'recompletionemailsubject'
+                            || $name == 'recompletionemailbody'
+                            || $name == 'recompletionremindersubject'
+                            || $name == 'recompletionreminderbody') {
+                        $value = '';
+                    } else {
+                        $value = 0;
+                    }
                 }
                 $rc = new stdclass();
                 if (isset($idmap[$name])) {

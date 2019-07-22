@@ -37,7 +37,12 @@ defined('MOODLE_INTERNAL') || die();
  */
 class helper {
 
-    public static function get_course_equivalents($courseid) {
+    /**
+     * @param $courseid
+     * @return array
+     * @throws \dml_exception
+     */
+    public static function get_course_equivalencies($courseid) {
         global $DB;
 
         $sql = "SELECT DISTINCT eqv.courseid
@@ -54,5 +59,4 @@ class helper {
 
         return $DB->get_records_sql($sql, array($courseid, $courseid));
     }
-
 }

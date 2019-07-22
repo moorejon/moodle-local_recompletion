@@ -25,6 +25,8 @@
 
 namespace local_recompletion\task;
 
+use local_recompletion\helper;
+
 defined('MOODLE_INTERNAL') || die();
 
 /**
@@ -436,7 +438,14 @@ class check_recompletion extends \core\task\scheduled_task {
             // Notifications will be sent after midnight.
             return;
         }
-        $sql = "SELECT cc.userid, cc.course, cc.timecompleted
+        $sql = "SELECT cc.userid, cc.course, cc.timecompleted,
+                       (SELECT COUNT(eq1.coursetwoid) 
+                           FROM {local_recompletion_equiv} eq1
+                            JOIN {course} c1 ON eq1.coursetwoid = c1.id
+                        WHERE eq1.courseoneid = c.id) + (SELECT COUNT(eq1.courseoneid) 
+                           FROM {local_recompletion_equiv} eq1
+                           JOIN {course} c2 ON eq1.courseoneid = c2.id
+                         WHERE eq1.coursetwoid = c.id) numofequiv
             FROM {course_completions} cc
             JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'
             JOIN {local_recompletion_config} r2 ON r2.course = cc.course AND r2.name = 'recompletionduration'
@@ -444,10 +453,20 @@ class check_recompletion extends \core\task\scheduled_task {
             JOIN {course} c ON c.id = cc.course
             WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND
             (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
+
         $users = $DB->get_recordset_sql($sql, array(time()));
         $courses = array();
         $configs = array();
         foreach ($users as $user) {
+            if ($user->numofequiv) {
+                if ($equivalents = \local_recompletion\helper::get_course_equivalencies($user->course)) {
+                    $lastequivalencycompletion =  helper::get_last_equivalency_completion($user->userid, $user->course, $equivalents);
+                    if ($lastequivalencycompletion->course != $user->course) {
+                        continue;
+                    }
+                }
+            }
+
             if (!isset($courses[$user->course])) {
                 // Only get the course record for this course once.
                 $course = get_course($user->course);

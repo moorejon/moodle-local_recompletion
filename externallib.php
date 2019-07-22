@@ -238,27 +238,20 @@ class local_recompletion_external extends external_api {
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $params['courseid']), '', 'name, value');
         $idmap = $DB->get_records_menu('local_recompletion_config', array('course' => $params['courseid']), '', 'name, id');
 
-        $daybasedvariables = array('recompletionduration', 'notificationstart', 'frequency');
         foreach ($setnames as $name) {
             if (isset($params['settings'][$name])) {
                 $value = $params['settings'][$name];
             } else {
-                $value = null;
+                if ($name == 'recompletionemailsubject'
+                    || $name == 'recompletionemailbody'
+                    || $name == 'recompletionremindersubject'
+                    || $name == 'recompletionreminderbody') {
+                    $value = '';
+                } else {
+                    $value = 0;
+                }
             }
-            if ((!is_null($value) && $config[$name] <> $value) || !isset($config[$name])) {
-                if (in_array($name, $daybasedvariables)) {
-                    $value = $value * 86400;
-                }
-                if (is_null($value)) {
-                    if ($name == 'recompletionemailsubject'
-                            || $name == 'recompletionemailbody'
-                            || $name == 'recompletionremindersubject'
-                            || $name == 'recompletionreminderbody') {
-                        $value = '';
-                    } else {
-                        $value = 0;
-                    }
-                }
+            if (!isset($config[$name]) || $config[$name] <> $value) {
                 $rc = new stdclass();
                 if (isset($idmap[$name])) {
                     $rc->id = $idmap[$name];
@@ -270,6 +263,10 @@ class local_recompletion_external extends external_api {
                     $DB->insert_record('local_recompletion_config', $rc);
                 } else {
                     $DB->update_record('local_recompletion_config', $rc);
+                }
+                if ($name == 'enable' && empty($value)) {
+                    // Don't overwrite any other settings when recompletion disabled.
+                    break;
                 }
             }
         }
@@ -592,7 +589,7 @@ class local_recompletion_external extends external_api {
             $rs = $DB->get_recordset('local_recompletion_cc', array('course' => $params['courseid']));
         }
 
-        $return = array('completions' => array());
+        $return = array();
 
         foreach ($rs as $recompletion) {
             $return['completions'][] = (array) $recompletion;

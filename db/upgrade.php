@@ -384,5 +384,12 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2019062001, 'local', 'recompletion');
     }
 
+    if ($oldversion < 2019081400) {
+        $table = new xmldb_table('local_recompletion_config');
+        $key = new xmldb_key('mdl_locarecoconf_cona_ix', XMLDB_KEY_UNIQUE, array('course', 'name'));
+        $dbman->add_key($table, $key);
+        upgrade_plugin_savepoint(true, 2019081400, 'local', 'recompletion');
+    }
+
     return true;
 }

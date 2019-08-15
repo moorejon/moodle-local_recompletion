@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/recompletion/db" VERSION="20190620" COMMENT="XMLDB file for Moodle local/recompletion"
+<XMLDB PATH="local/recompletion/db" VERSION="20190814" COMMENT="XMLDB file for Moodle local/recompletion"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
@@ -140,6 +140,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="mdl_locarecoconf_cona_ix" TYPE="unique" FIELDS="course, name"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="course" UNIQUE="false" FIELDS="course"/>

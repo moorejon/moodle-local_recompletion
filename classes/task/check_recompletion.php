@@ -320,6 +320,14 @@ class check_recompletion extends \core\task\scheduled_task {
             return;
         }
 
+        // When an equivalent course expires, only send the notification that it expired if no other equivalent courses are still complete.
+        if ($equivalents = \local_recompletion\helper::get_course_equivalencies($course->id)) {
+            $lastequivalencycompletion =  helper::get_last_equivalency_completion($userid, $course->id, $equivalents);
+            if (!empty($lastequivalencycompletion)) {
+                return;
+            }
+        }
+
         $userrecord = $DB->get_record('user', array('id' => $userid));
         $context = \context_course::instance($course->id);
         $from = get_admin();
@@ -440,11 +448,12 @@ class check_recompletion extends \core\task\scheduled_task {
         }
         $sql = "SELECT cc.userid, cc.course, cc.timecompleted,
                        (SELECT COUNT(eq1.coursetwoid) 
-                           FROM {local_recompletion_equiv} eq1
-                            JOIN {course} c1 ON eq1.coursetwoid = c1.id
-                        WHERE eq1.courseoneid = c.id) + (SELECT COUNT(eq1.courseoneid) 
-                           FROM {local_recompletion_equiv} eq1
-                           JOIN {course} c2 ON eq1.courseoneid = c2.id
+                          FROM {local_recompletion_equiv} eq1
+                          JOIN {course} c1 ON eq1.coursetwoid = c1.id
+                         WHERE eq1.courseoneid = c.id) 
+                     + (SELECT COUNT(eq1.courseoneid) 
+                          FROM {local_recompletion_equiv} eq1
+                          JOIN {course} c2 ON eq1.courseoneid = c2.id
                          WHERE eq1.coursetwoid = c.id) numofequiv
             FROM {course_completions} cc
             JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'

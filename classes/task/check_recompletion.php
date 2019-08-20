@@ -329,6 +329,9 @@ class check_recompletion extends \core\task\scheduled_task {
         }
 
         $userrecord = $DB->get_record('user', array('id' => $userid));
+        if ($userrecord->suspended) {
+            return;
+        }
         $context = \context_course::instance($course->id);
         $from = get_admin();
         $a = new \stdClass();
@@ -460,7 +463,8 @@ class check_recompletion extends \core\task\scheduled_task {
             JOIN {local_recompletion_config} r2 ON r2.course = cc.course AND r2.name = 'recompletionduration'
             JOIN {local_recompletion_config} r3 ON r3.course = cc.course AND r3.name = 'notificationstart'
             JOIN {course} c ON c.id = cc.course
-            WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND
+            JOIN {user} u ON u.id = cc.userid
+            WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND u.suspended = 0 AND
             (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
 
         $users = $DB->get_recordset_sql($sql, array(time()));

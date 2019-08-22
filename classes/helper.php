@@ -76,18 +76,14 @@ class helper {
         list($insql, $params) = $DB->get_in_or_equal($courseids, SQL_PARAMS_NAMED, 'cor');
 
         $params['userid'] = $userid;
-        $params['courseid1'] = $courseid;
-        $params['courseid2'] = $courseid;
 
-        $sql = "SELECT cc.course, cc.timecompleted, cfgenable.value AS enabled, cfgduration.value AS duration
+        $sql = "SELECT cc.course, cc.timecompleted
                   FROM (
                   SELECT course, userid, timecompleted FROM {course_completions}
                   UNION 
                   SELECT course, userid, timecompleted FROM {local_recompletion_cc}
                   ) cc
                   JOIN {course} c ON c.id = cc.course
-             LEFT JOIN {local_recompletion_config} cfgenable ON cfgenable.course = :courseid1 AND cfgenable.name = 'enable'
-             LEFT JOIN {local_recompletion_config} cfgduration ON cfgduration.course = :courseid2 AND cfgduration.name = 'recompletionduration'
                  WHERE c.enablecompletion = ".COMPLETION_ENABLED."
                    AND timecompleted > 0
                    AND cc.userid = :userid

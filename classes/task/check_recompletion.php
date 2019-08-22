@@ -448,7 +448,7 @@ class check_recompletion extends \core\task\scheduled_task {
                   JOIN {local_recompletion_config} cfgemail ON cfgemail.course = c.id AND cfgemail.name = 'recompletionemailenable'
                    AND c.visible = 1
                    AND c.enablecompletion = ".COMPLETION_ENABLED."
-                   AND cfgenable.value = 1 AND cfgduration.value > 0 AND cfgemail.value = 1";
+                   AND ".$DB->sql_cast_char2int('cfgenable.value')." = 1 AND ".$DB->sql_cast_char2int('cfgduration.value')." > 0 AND ".$DB->sql_cast_char2int('cfgemail.value')." = 1";
 
         $courses = $DB->get_records_sql($sql);
 

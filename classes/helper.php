@@ -42,9 +42,16 @@ class helper {
      * @return array
      * @throws \dml_exception
      */
-    public static function get_course_equivalencies($courseid) {
+    public static function get_course_equivalencies($courseid, $includeself = false) {
         global $DB;
 
+        $params = array($courseid, $courseid);
+
+        $includeselfsql = '';
+        if ($includeself) {
+            $includeselfsql = 'UNION SELECT ? courseid';
+            $params[] = $courseid;
+        }
         $sql = "SELECT DISTINCT eqv.courseid
                   FROM (SELECT eq1.coursetwoid courseid 
                           FROM {local_recompletion_equiv} eq1
@@ -53,11 +60,12 @@ class helper {
                         SELECT eq1.courseoneid courseid
                           FROM {local_recompletion_equiv} eq1
                          WHERE eq1.coursetwoid = ?
+                         $includeselfsql
                        ) AS eqv
                   JOIN {course} c 
                     ON eqv.courseid = c.id";
 
-        return $DB->get_records_sql($sql, array($courseid, $courseid));
+        return $DB->get_records_sql($sql, $params);
     }
 
     public static function get_last_equivalency_completion($userid, $courseid, $equivalencies) {

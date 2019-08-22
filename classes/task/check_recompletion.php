@@ -66,9 +66,10 @@ class check_recompletion extends \core\task\scheduled_task {
             FROM {course_completions} cc
             JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'
             JOIN {local_recompletion_config} r2 ON r2.course = cc.course AND r2.name = 'recompletionduration'
+            JOIN {local_recompletion_config} r3 ON r3.course = cc.course AND r3.name = 'notificationstart'
             JOIN {course} c ON c.id = cc.course
             WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND
-            (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value').") < ?";
+            (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
         $users = $DB->get_recordset_sql($sql, array(time()));
         $courses = array();
         $configs = array();
@@ -457,7 +458,8 @@ class check_recompletion extends \core\task\scheduled_task {
                      + (SELECT COUNT(eq1.courseoneid) 
                           FROM {local_recompletion_equiv} eq1
                           JOIN {course} c2 ON eq1.courseoneid = c2.id
-                         WHERE eq1.coursetwoid = c.id) numofequiv
+                         WHERE eq1.coursetwoid = c.id) numofequiv,
+                         0 isnotcurrent
             FROM {course_completions} cc
             JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'
             JOIN {local_recompletion_config} r2 ON r2.course = cc.course AND r2.name = 'recompletionduration'
@@ -465,17 +467,42 @@ class check_recompletion extends \core\task\scheduled_task {
             JOIN {course} c ON c.id = cc.course
             JOIN {user} u ON u.id = cc.userid
             WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND u.suspended = 0 AND
-            (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
+            (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?
+            UNION
+            SELECT cc.userid, cc.course, cc.timecompleted,
+                       (SELECT COUNT(eq1.coursetwoid) 
+                          FROM {local_recompletion_equiv} eq1
+                          JOIN {course} c1 ON eq1.coursetwoid = c1.id
+                         WHERE eq1.courseoneid = c.id) 
+                     + (SELECT COUNT(eq1.courseoneid) 
+                          FROM {local_recompletion_equiv} eq1
+                          JOIN {course} c2 ON eq1.courseoneid = c2.id
+                         WHERE eq1.coursetwoid = c.id) numofequiv,                         
+                       (SELECT COUNT(1) FROM {course_completions} cc2 WHERE cc2.userid = cc.userid AND cc2.course = cc.course AND cc2.timecompleted > 0) isnotcurrent
+            FROM (SELECT cc1.userid, cc1.course, MAX(cc1.timecompleted) timecompleted FROM {local_recompletion_cc} cc1 GROUP BY cc1.userid, cc1.course) cc
+            JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'
+            JOIN {local_recompletion_config} r2 ON r2.course = cc.course AND r2.name = 'recompletionduration'
+            JOIN {local_recompletion_config} r3 ON r3.course = cc.course AND r3.name = 'notificationstart'
+            JOIN {course} c ON c.id = cc.course
+            JOIN {user} u ON u.id = cc.userid
+            WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND u.suspended = 0 AND
+            (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?
+            ";
 
-        $users = $DB->get_recordset_sql($sql, array(time()));
+        $users = $DB->get_recordset_sql($sql, array(time(), time()));
+
         $courses = array();
         $configs = array();
         foreach ($users as $user) {
+            if ($user->isnotcurrent) {
+                continue;
+            }
             if ($user->numofequiv) {
                 if ($equivalents = \local_recompletion\helper::get_course_equivalencies($user->course)) {
-                    $lastequivalencycompletion =  helper::get_last_equivalency_completion($user->userid, $user->course, $equivalents);
-                    if ($lastequivalencycompletion->course != $user->course) {
-                        continue;
+                    if ($lastequivalencycompletion =  helper::get_last_equivalency_completion($user->userid, $user->course, $equivalents)) {
+                        if ($lastequivalencycompletion->course != $user->course) {
+                            continue;
+                        }
                     }
                 }
             }

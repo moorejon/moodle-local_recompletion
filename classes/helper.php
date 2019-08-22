@@ -79,7 +79,7 @@ class helper {
         $params['courseid1'] = $courseid;
         $params['courseid2'] = $courseid;
 
-        $sql = "SELECT cc.course, cc.timecompleted, cfgenable.value AS 'enabled', cfgduration.value AS 'duration'
+        $sql = "SELECT cc.course, cc.timecompleted, cfgenable.value AS enabled, cfgduration.value AS duration
                   FROM (
                   SELECT course, userid, timecompleted FROM {course_completions}
                   UNION 

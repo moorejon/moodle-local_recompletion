@@ -73,7 +73,7 @@ class check_recompletion extends \core\task\scheduled_task {
             JOIN {course} c ON c.id = cc.course
             WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND
             (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
-        $users = $DB->get_recordset_sql($sql, array(time()));
+        $users = $DB->get_records_sql($sql, array(time()));
         $courses = array();
         foreach ($users as $user) {
             if (!isset($courses[$user->course])) {
@@ -458,13 +458,13 @@ class check_recompletion extends \core\task\scheduled_task {
                 // Only get the recompletion config record for this course once.
                 $config = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, value');
                 $config = (object) $config;
-                $configs[$course->id] = $config;
+                $this->configs[$course->id] = $config;
             } else {
                 $config = $this->configs[$course->id];
             }
 
             $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id, true);
-            list($insql, $inparams) = $DB->get_in_or_equal($equivalents);
+            list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
             $params = array_merge(array($course->id), $inparams);
 
             $sql = "SELECT ue.userid, cc.course, cc.timecompleted
@@ -472,11 +472,13 @@ class check_recompletion extends \core\task\scheduled_task {
                     JOIN {enrol} e ON ue.enrolid = e.id
                   JOIN (SELECT userid, course, timecompleted 
                         FROM {course_completions}
-                        UNION userid, course, timecompleted
+                        UNION 
+                        SELECT userid, course, timecompleted
                         FROM {local_recompletion_cc}) cc ON cc.userid = ue.userid
                 LEFT JOIN (SELECT userid, course, timecompleted 
                         FROM {course_completions}
-                        UNION userid, course, timecompleted
+                        UNION 
+                        SELECT userid, course, timecompleted
                         FROM {local_recompletion_cc}) cc2 ON cc2.course = cc.course AND cc2.userid = cc.userid AND cc2.timecompleted > cc.timecompleted
                  WHERE ue.status = 0 AND e.status = 0
                    AND cc.timecompleted > 0

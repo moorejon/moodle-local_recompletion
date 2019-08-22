@@ -38,6 +38,9 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class check_recompletion extends \core\task\scheduled_task {
+
+    protected $configs = array();
+
     /**
      * Returns the name of this task.
      */
@@ -66,13 +69,12 @@ class check_recompletion extends \core\task\scheduled_task {
             FROM {course_completions} cc
             JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'
             JOIN {local_recompletion_config} r2 ON r2.course = cc.course AND r2.name = 'recompletionduration'
+            JOIN {local_recompletion_config} r3 ON r3.course = cc.course AND r3.name = 'notificationstart'
             JOIN {course} c ON c.id = cc.course
             WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND
-            (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value').") < ?";
-        $users = $DB->get_recordset_sql($sql, array(time()));
+            (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
+        $users = $DB->get_records_sql($sql, array(time()));
         $courses = array();
-        $configs = array();
-        $clearcache = false;
         foreach ($users as $user) {
             if (!isset($courses[$user->course])) {
                 // Only get the course record for this course once.
@@ -83,13 +85,13 @@ class check_recompletion extends \core\task\scheduled_task {
             }
 
             // Get recompletion config.
-            if (!isset($configs[$user->course])) {
+            if (!isset($this->configs[$user->course])) {
                 // Only get the recompletion config record for this course once.
                 $config = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, value');
                 $config = (object) $config;
-                $configs[$user->course] = $config;
+                $this->configs[$user->course] = $config;
             } else {
-                $config = $configs[$user->course];
+                $config = $this->configs[$user->course];
             }
             $this->reset_user($user->userid, $course, $config);
         }
@@ -320,14 +322,6 @@ class check_recompletion extends \core\task\scheduled_task {
             return;
         }
 
-        // When an equivalent course expires, only send the notification that it expired if no other equivalent courses are still complete.
-        if ($equivalents = \local_recompletion\helper::get_course_equivalencies($course->id)) {
-            $lastequivalencycompletion =  helper::get_last_equivalency_completion($userid, $course->id, $equivalents);
-            if (!empty($lastequivalencycompletion)) {
-                return;
-            }
-        }
-
         $userrecord = $DB->get_record('user', array('id' => $userid));
         if ($userrecord->suspended) {
             return;
@@ -401,9 +395,6 @@ class check_recompletion extends \core\task\scheduled_task {
             $this->reset_customcert($userid, $course, $config);
         }
 
-        // Now notify user.
-        $this->notify_user($userid, $course, $config);
-
         // Trigger completion reset event for this user.
         $context = \context_course::instance($course->id);
         $event = \local_recompletion\event\completion_reset::create(
@@ -449,69 +440,86 @@ class check_recompletion extends \core\task\scheduled_task {
             // Notifications will be sent after midnight.
             return;
         }
-        $sql = "SELECT cc.userid, cc.course, cc.timecompleted,
-                       (SELECT COUNT(eq1.coursetwoid) 
-                          FROM {local_recompletion_equiv} eq1
-                          JOIN {course} c1 ON eq1.coursetwoid = c1.id
-                         WHERE eq1.courseoneid = c.id) 
-                     + (SELECT COUNT(eq1.courseoneid) 
-                          FROM {local_recompletion_equiv} eq1
-                          JOIN {course} c2 ON eq1.courseoneid = c2.id
-                         WHERE eq1.coursetwoid = c.id) numofequiv
-            FROM {course_completions} cc
-            JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'
-            JOIN {local_recompletion_config} r2 ON r2.course = cc.course AND r2.name = 'recompletionduration'
-            JOIN {local_recompletion_config} r3 ON r3.course = cc.course AND r3.name = 'notificationstart'
-            JOIN {course} c ON c.id = cc.course
-            JOIN {user} u ON u.id = cc.userid
-            WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND u.suspended = 0 AND
-            (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
 
-        $users = $DB->get_recordset_sql($sql, array(time()));
-        $courses = array();
-        $configs = array();
-        foreach ($users as $user) {
-            if ($user->numofequiv) {
-                if ($equivalents = \local_recompletion\helper::get_course_equivalencies($user->course)) {
-                    $lastequivalencycompletion =  helper::get_last_equivalency_completion($user->userid, $user->course, $equivalents);
-                    if ($lastequivalencycompletion->course != $user->course) {
-                        continue;
-                    }
-                }
-            }
+        $sql = "SELECT c.*
+                  FROM  {course} c
+                  JOIN {local_recompletion_config} cfgenable ON cfgenable.course = c.id AND cfgenable.name = 'enable'
+                  JOIN {local_recompletion_config} cfgduration ON cfgduration.course = c.id AND cfgduration.name = 'recompletionduration'
+                  JOIN {local_recompletion_config} cfgemail ON cfgemail.course = c.id AND cfgemail.name = 'recompletionemailenable'
+                   AND c.visible = 1
+                   AND c.enablecompletion = ".COMPLETION_ENABLED."
+                   AND cfgenable.value = 1 AND cfgduration.value > 0 AND cfgemail.value = 1";
 
-            if (!isset($courses[$user->course])) {
-                // Only get the course record for this course once.
-                $course = get_course($user->course);
-                $courses[$user->course] = $course;
-            } else {
-                $course = $courses[$user->course];
-            }
+        $courses = $DB->get_records_sql($sql);
 
+        foreach ($courses as $course) {
             // Get recompletion config.
-            if (!isset($configs[$user->course])) {
+            if (!isset($this->configs[$course->id])) {
                 // Only get the recompletion config record for this course once.
                 $config = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, value');
                 $config = (object) $config;
-                $configs[$user->course] = $config;
+                $this->configs[$course->id] = $config;
             } else {
-                $config = $configs[$user->course];
+                $config = $this->configs[$course->id];
             }
 
-            // Don't send notification for same day recompletions.
-            if ($config->recompletionduration < 86400 || $config->notificationstart < 86400 || $config->frequency < 86400) {
-                continue;
-            }
+            $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id, true);
+            list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
+            $params = array_merge(array($course->id), $inparams);
 
-            $frequencyday = floor($config->frequency / 86400);
-            $daysfterreminderstarts = floor(($time - ($user->timecompleted + $config->recompletionduration - $config->notificationstart)) / 86400);
+            $sql = "SELECT ue.userid, cc.course, cc.timecompleted
+                    FROM {user_enrolments} ue
+                    JOIN {enrol} e ON ue.enrolid = e.id
+                  JOIN (SELECT userid, course, timecompleted 
+                        FROM {course_completions}
+                        UNION 
+                        SELECT userid, course, timecompleted
+                        FROM {local_recompletion_cc}) cc ON cc.userid = ue.userid
+                LEFT JOIN (SELECT userid, course, timecompleted 
+                        FROM {course_completions}
+                        UNION 
+                        SELECT userid, course, timecompleted
+                        FROM {local_recompletion_cc}) cc2 ON cc2.course = cc.course AND cc2.userid = cc.userid AND cc2.timecompleted > cc.timecompleted
+                 WHERE ue.status = 0 AND e.status = 0
+                   AND cc.timecompleted > 0
+                   AND e.courseid = ?
+                   AND cc.course $insql
+                   AND cc2.timecompleted IS NULL
+                   ORDER BY cc.timecompleted DESC";
 
-            if ($daysfterreminderstarts < 0) {
-                continue;
-            }
+            $users = $DB->get_records_sql($sql, $params);
 
-            if ($daysfterreminderstarts % $frequencyday == 0) {
-                $this->remind_user($user->userid, $course, $config);
+            foreach ($users as $user) {
+                // Don't send notification for same day recompletions.
+                if ($config->recompletionduration < 86400 || $config->notificationstart < 86400 || $config->frequency < 86400) {
+                    continue;
+                }
+
+                $expirationdate = $user->timecompleted + $config->recompletionduration;
+                $currentday = floor($time / 86400);
+                $expirationday = floor($expirationdate / 86400);
+
+                if ($currentday == $expirationday) {
+                    $this->notify_user($user->userid, $course, $config);
+                } else if ($time > $expirationdate) {
+                    // No notifications needed for expired courses that have already passed expiration day
+                    continue;
+                } else {
+                    $frequencyday = floor($config->frequency / 86400);
+
+                    $daysfterreminderstarts =
+                            floor(($time - ($expirationdate - $config->notificationstart)) /
+                                    86400);
+
+                    // Haven't reached notification start yet
+                    if ($daysfterreminderstarts < 0) {
+                        continue;
+                    }
+
+                    if ($daysfterreminderstarts % $frequencyday == 0) {
+                        $this->remind_user($user->userid, $course, $config);
+                    }
+                }
             }
         }
 
@@ -524,7 +532,6 @@ class check_recompletion extends \core\task\scheduled_task {
      * Notify user before recompletion.
      * @param \int $userid - user id
      * @param \stdclass $course - record from course table.
-     * @param \stdClass $config - recompletion config.
      */
     protected function remind_user($userid, $course, $config) {
         global $DB, $CFG;

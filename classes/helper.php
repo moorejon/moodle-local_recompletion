@@ -27,6 +27,8 @@ namespace local_recompletion;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once($CFG->libdir . '/completionlib.php');
+
 /**
  * Helper.
  *

@@ -142,3 +142,4 @@ The following placeholders may be included in the message:
 $string['recompletionreminderdefaultbody'] = 'Hi there, you will need to recomplete the course {$a->coursename} {$a->link} soon';
 $string['eventrecompletionreminder'] = 'Course recompletion reminder';
 $string['errorgreaterperiod'] = 'It must be less than "Recompletion period"';
+$string['bulknotification'] = 'Enable bulk notification';

@@ -52,6 +52,10 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->addHelpButton('recompletionemailenable', 'recompletionemailenable', 'local_recompletion');
         $mform->disabledIf('recompletionemailenable', 'enable', 'notchecked');
 
+        $mform->addElement('checkbox', 'bulknotification', get_string('bulknotification', 'local_recompletion'));
+        $mform->setDefault('bulknotification', 0);
+        $mform->disabledIf('bulknotification', 'enable', 'notchecked');
+
         $mform->addElement('duration', 'notificationstart', get_string('notificationstart', 'local_recompletion'), $options);
         $mform->addHelpButton('notificationstart', 'notificationstart', 'local_recompletion');
         $mform->disabledIf('notificationstart', 'enable', 'notchecked');

@@ -442,7 +442,7 @@ class check_recompletion extends \core\task\scheduled_task {
         }
 
         $sql = "SELECT c.*
-                  FROM  {course} c
+                  FROM {course} c
                   JOIN {local_recompletion_config} cfgenable ON cfgenable.course = c.id AND cfgenable.name = 'enable'
                   JOIN {local_recompletion_config} cfgduration ON cfgduration.course = c.id AND cfgduration.name = 'recompletionduration'
                   JOIN {local_recompletion_config} cfgemail ON cfgemail.course = c.id AND cfgemail.name = 'recompletionemailenable'
@@ -491,33 +491,37 @@ class check_recompletion extends \core\task\scheduled_task {
 
             foreach ($users as $user) {
                 // Don't send notification for same day recompletions.
-                if ($config->recompletionduration < 86400 || $config->notificationstart < 86400 || $config->frequency < 86400) {
+                if ($config->recompletionduration < DAYSECS || $config->notificationstart < DAYSECS || $config->frequency < DAYSECS) {
                     continue;
                 }
 
                 $expirationdate = $user->timecompleted + $config->recompletionduration;
-                $currentday = floor($time / 86400);
-                $expirationday = floor($expirationdate / 86400);
+                $currentday = floor($time / DAYSECS);
+                $expirationday = floor($expirationdate / DAYSECS);
 
                 if ($currentday == $expirationday) {
                     $this->notify_user($user->userid, $course, $config);
                 } else if ($time > $expirationdate) {
                     // No notifications needed for expired courses that have already passed expiration day
                     continue;
-                } else {
-                    $frequencyday = floor($config->frequency / 86400);
+                } else {print_object($user);
+                    if (isset($config->bulknotification) && !empty($config->bulknotification)) {
+                        if ((date('j', $time) == 1) || (date('j', $time) == 15)) {
+                            $this->remind_user($user->userid, $course, $config);
+                        }
+                    } else {
+                        $frequencyday = floor($config->frequency / DAYSECS);
 
-                    $daysfterreminderstarts =
-                            floor(($time - ($expirationdate - $config->notificationstart)) /
-                                    86400);
+                        $daysfterreminderstarts = floor(($time - ($expirationdate - $config->notificationstart)) / DAYSECS);
 
-                    // Haven't reached notification start yet
-                    if ($daysfterreminderstarts < 0) {
-                        continue;
-                    }
+                        // Haven't reached notification start yet
+                        if ($daysfterreminderstarts < 0) {
+                            continue;
+                        }
 
-                    if ($daysfterreminderstarts % $frequencyday == 0) {
-                        $this->remind_user($user->userid, $course, $config);
+                        if ($daysfterreminderstarts % $frequencyday == 0) {
+                            $this->remind_user($user->userid, $course, $config);
+                        }
                     }
                 }
             }

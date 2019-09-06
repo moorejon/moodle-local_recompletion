@@ -82,7 +82,7 @@ $idmap = $DB->get_records_menu('local_recompletion_config', array('course' => $c
 
 $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
     'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
-    'assigndata', 'customcertdata', 'archivecustomcertdata', 'notificationstart', 'frequency', 'recompletionremindersubject',
+    'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
     'recompletionreminderbody');
 
 // Create the settings form instance.

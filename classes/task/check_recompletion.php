@@ -465,7 +465,7 @@ class check_recompletion extends \core\task\scheduled_task {
 
             $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id, true);
             list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
-            $params = array_merge(array($course->id), $inparams);
+            $params = array_merge($inparams, array($course->id), $inparams);
 
             $sql = "SELECT ue.userid, cc.course, cc.timecompleted
                     FROM {user_enrolments} ue
@@ -479,7 +479,7 @@ class check_recompletion extends \core\task\scheduled_task {
                         FROM {course_completions}
                         UNION 
                         SELECT userid, course, timecompleted
-                        FROM {local_recompletion_cc}) cc2 ON cc2.course = cc.course AND cc2.userid = cc.userid AND cc2.timecompleted > cc.timecompleted
+                        FROM {local_recompletion_cc}) cc2 ON cc2.userid = cc.userid AND cc2.course $insql AND cc2.timecompleted > cc.timecompleted
                  WHERE ue.status = 0 AND e.status = 0
                    AND cc.timecompleted > 0
                    AND e.courseid = ?

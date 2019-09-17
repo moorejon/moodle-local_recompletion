@@ -134,6 +134,16 @@ class local_recompletion_external extends external_api {
             $return[] = $userdata;
         }
 
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_get_course_completions'] + $params,
+            )
+        );
+        $event->trigger();
+
         return $return;
     }
 
@@ -275,6 +285,16 @@ class local_recompletion_external extends external_api {
             }
         }
 
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_update_course_settings'] + $params,
+            )
+        );
+        $event->trigger();
+
         return true;
     }
 
@@ -342,6 +362,16 @@ class local_recompletion_external extends external_api {
         $comp->timeenrolled = $params['timeenrolled'];
         $comp->timestarted = $params['timestarted'];
         $comp->reaggregate = $params['reaggregate'];
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_create_completion'] + $params,
+            )
+        );
+        $event->trigger();
 
         if ($DB->insert_record('local_recompletion_cc', $comp)) {
             return true;
@@ -411,6 +441,16 @@ class local_recompletion_external extends external_api {
                 throw new moodle_exception('unknowncompletion');
             }
         }
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_update_completion'] + $params,
+            )
+        );
+        $event->trigger();
         return true;
     }
 
@@ -456,6 +496,16 @@ class local_recompletion_external extends external_api {
         $context = context_course::instance($recompletion->course);
         self::validate_context($context);
         require_capability('local/recompletion:manage', $context);
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_delete_completion'] + $params,
+            )
+        );
+        $event->trigger();
 
         if ($DB->delete_records('local_recompletion_cc', array('id' => $params['completionid']))) {
             return true;
@@ -519,6 +569,16 @@ class local_recompletion_external extends external_api {
                 $settings[$setname] = $settingvalue;
             }
         }
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_get_course_settings'] + $params,
+            )
+        );
+        $event->trigger();
 
         return $settings;
     }
@@ -601,6 +661,16 @@ class local_recompletion_external extends external_api {
         }
 
         $rs->close();
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_get_recompletions'] + $params,
+            )
+        );
+        $event->trigger();
 
         return $return;
     }
@@ -686,6 +756,17 @@ class local_recompletion_external extends external_api {
         $comp->timestarted = $params['timestarted'];
         $comp->reaggregate = $params['reaggregate'];
 
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_create_core_completion'] + $params,
+            )
+        );
+        $event->trigger();
+
+
         if ($DB->insert_record('course_completions', $comp)) {
             return true;
         } else {
@@ -750,6 +831,17 @@ class local_recompletion_external extends external_api {
         }
 
         $rs->close();
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_get_core_course_completions'] + $params,
+            )
+        );
+        $event->trigger();
+
 
         return $return;
     }
@@ -831,6 +923,17 @@ class local_recompletion_external extends external_api {
                 throw new moodle_exception('unknowncompletion');
             }
         }
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_update_core_completion'] + $params,
+            )
+        );
+        $event->trigger();
+
         return true;
     }
 
@@ -876,6 +979,16 @@ class local_recompletion_external extends external_api {
         $context = context_course::instance($corecompletion->course);
         self::validate_context($context);
         require_capability('local/recompletion:manage', $context);
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_delete_core_completion'] + $params,
+            )
+        );
+        $event->trigger();
 
         if ($DB->delete_records('course_completions', array('id' => $params['completionid']))) {
             return true;
@@ -942,6 +1055,16 @@ class local_recompletion_external extends external_api {
         $obj->courseoneid = $params['courseoneid'];
         $obj->coursetwoid = $params['coursetwoid'];
 
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_create_course_equivalent'] + $params,
+            )
+        );
+        $event->trigger();
+
         if ($DB->insert_record('local_recompletion_equiv', $obj)) {
             return true;
         } else {
@@ -1000,6 +1123,16 @@ class local_recompletion_external extends external_api {
 
         $return1  = $DB->delete_records('local_recompletion_equiv', array('courseoneid' => $params['courseoneid'], 'coursetwoid' => $params['coursetwoid']));
         $return2  =  $DB->delete_records('local_recompletion_equiv', array('coursetwoid' => $params['courseoneid'], 'courseoneid' => $params['coursetwoid']));
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_delete_course_equivalent'] + $params,
+            )
+        );
+        $event->trigger();
 
         if ($return1 || $return2) {
             return true;
@@ -1066,6 +1199,17 @@ class local_recompletion_external extends external_api {
                 ];
             }
         }
+
+        // Trigger event.
+        $context = \context_system::instance();
+        $event = \local_recompletion\event\webservice_requested::create(
+            array(
+                'context' => $context,
+                'other' => ['function' => 'local_recompletion_get_course_equivalencies'] + $params,
+            )
+        );
+        $event->trigger();
+
 
         return $return;
     }

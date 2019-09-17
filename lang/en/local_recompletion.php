@@ -143,3 +143,4 @@ $string['recompletionreminderdefaultbody'] = 'Hi there, you will need to recompl
 $string['eventrecompletionreminder'] = 'Course recompletion reminder';
 $string['errorgreaterperiod'] = 'It must be less than "Recompletion period"';
 $string['bulknotification'] = 'Enable bulk notification';
+$string['webservicerequest'] = 'Webservice Request';

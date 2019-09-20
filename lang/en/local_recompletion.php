@@ -56,7 +56,9 @@ The following placeholders may be included in the message:
 * Link to user\'s profile page {$a->profileurl}
 * User email {$a->email}
 * User fullname {$a->fullname}';
-$string['recompletionemaildefaultbody'] = 'Hi there, please recomplete the course {$a->coursename} {$a->link}';
+$string['recompletionemaildefaultbody'] = 'Hello {$a->fullname}, 
+
+The course <a href="{$a->link}">{$a->coursename}</a> is now out of compliance.';
 $string['advancedrecompletiontitle'] = 'Advanced';
 $string['deletegradedata'] = 'Delete all grades for the user';
 $string['deletegradedata_help'] = 'Delete current grade completion data from grade_grades table. Grade recompletion data is permanently deleted but data retained in Grade history data table.';
@@ -128,7 +130,7 @@ The following placeholders may be included in the message:
 
 * Course name {$a->coursename}
 * User fullname {$a->fullname}';
-$string['recompletionreminderdefaultsubject'] = 'Course {$a->coursename} recompletion required';
+$string['recompletionreminderdefaultsubject'] = 'Course {$a->coursename} recompletion required soon';
 $string['recompletionreminderbody'] = 'Recompletion reminder message body';
 $string['recompletionreminderbody_help'] = 'A custom recompletion email subject may be added as plain text or Moodle-auto format, including HTML tags and multi-lang tags
 
@@ -139,6 +141,15 @@ The following placeholders may be included in the message:
 * Link to user\'s profile page {$a->profileurl}
 * User email {$a->email}
 * User fullname {$a->fullname}';
-$string['recompletionreminderdefaultbody'] = 'Hi there, you will need to recomplete the course {$a->coursename} {$a->link} soon';
+$string['recompletionreminderdefaultbody'] = 'Hello {$a->fullname}, 
+
+You will need to recomplete the course <a href="{$a->link}">{$a->coursename}</a> soon.';
 $string['eventrecompletionreminder'] = 'Course recompletion reminder';
 $string['errorgreaterperiod'] = 'It must be less than "Recompletion period"';
+$string['bulknotification'] = 'Enable bulk notification';
+$string['bulknotification_emailbody'] = 'Hello {$a->name},
+
+';
+$string['bulknotification_outofcomp'] = 'The following courses are out of compliance:';
+$string['bulknotification_comingdue'] = 'The following courses are coming due:';
+$string['bulknotification_emailsubject'] = 'Course recompletion required';

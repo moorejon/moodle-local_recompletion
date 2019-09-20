@@ -181,6 +181,7 @@ class local_recompletion_external extends external_api {
                         'enable' => new external_value(PARAM_INT, 'Enable recompletion', VALUE_OPTIONAL),
                         'recompletionduration' => new external_value(PARAM_INT, 'Recompletion period in days', VALUE_OPTIONAL),
                         'recompletionemailenable' => new external_value(PARAM_INT, 'Send recompletion message', VALUE_OPTIONAL),
+                        'bulknotification' => new external_value(PARAM_INT, 'Enable bulk notification', VALUE_OPTIONAL),
                         'notificationstart' => new external_value(PARAM_INT, 'Notification start in days prior', VALUE_OPTIONAL),
                         'frequency' => new external_value(PARAM_INT, ' Frequency in days', VALUE_OPTIONAL),
 
@@ -225,7 +226,7 @@ class local_recompletion_external extends external_api {
 
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
-            'assigndata', 'customcertdata', 'archivecustomcertdata', 'notificationstart', 'frequency', 'recompletionremindersubject',
+            'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
             'recompletionreminderbody');
 
         $context = context_course::instance($params['courseid']);
@@ -501,7 +502,7 @@ class local_recompletion_external extends external_api {
 
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
-            'assigndata', 'customcertdata', 'archivecustomcertdata', 'notificationstart', 'frequency', 'recompletionremindersubject',
+            'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
             'recompletionreminderbody');
 
         $context = context_course::instance($params['courseid']);
@@ -544,6 +545,7 @@ class local_recompletion_external extends external_api {
                 'assigndata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
                 'customcertdata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
                 'archivecustomcertdata' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'bulknotification' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
                 'notificationstart' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
                 'frequency' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
                 'recompletionremindersubject' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),

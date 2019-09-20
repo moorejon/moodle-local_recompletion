@@ -65,7 +65,7 @@ class check_recompletion extends \core\task\scheduled_task {
             return;
         }
 
-        $sql = "SELECT cc.userid, cc.course
+        $sql = "SELECT cc.id, cc.userid, cc.course
             FROM {course_completions} cc
             JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'
             JOIN {local_recompletion_config} r2 ON r2.course = cc.course AND r2.name = 'recompletionduration'
@@ -318,18 +318,15 @@ class check_recompletion extends \core\task\scheduled_task {
     protected function notify_user($userid, $course, $config) {
         global $DB, $CFG;
 
-        if (!$config->recompletionemailenable) {
-            return;
-        }
-
         $userrecord = $DB->get_record('user', array('id' => $userid));
         if ($userrecord->suspended) {
             return;
         }
         $context = \context_course::instance($course->id);
-        $from = get_admin();
+        $from = $CFG->supportname;
         $a = new \stdClass();
         $a->coursename = format_string($course->fullname, true, array('context' => $context));
+        $a->fullname = fullname($userrecord);
         $a->profileurl = "$CFG->wwwroot/user/view.php?id=$userrecord->id&course=$course->id";
         $a->link = course_get_url($course)->out();
         if (trim($config->recompletionemailbody) !== '') {
@@ -442,7 +439,7 @@ class check_recompletion extends \core\task\scheduled_task {
         }
 
         $sql = "SELECT c.*
-                  FROM  {course} c
+                  FROM {course} c
                   JOIN {local_recompletion_config} cfgenable ON cfgenable.course = c.id AND cfgenable.name = 'enable'
                   JOIN {local_recompletion_config} cfgduration ON cfgduration.course = c.id AND cfgduration.name = 'recompletionduration'
                   JOIN {local_recompletion_config} cfgemail ON cfgemail.course = c.id AND cfgemail.name = 'recompletionemailenable'
@@ -451,6 +448,8 @@ class check_recompletion extends \core\task\scheduled_task {
                    AND ".$DB->sql_cast_char2int('cfgenable.value')." = 1 AND ".$DB->sql_cast_char2int('cfgduration.value')." > 0 AND ".$DB->sql_cast_char2int('cfgemail.value')." = 1";
 
         $courses = $DB->get_records_sql($sql);
+
+        $bulkemail = array();
 
         foreach ($courses as $course) {
             // Get recompletion config.
@@ -467,7 +466,7 @@ class check_recompletion extends \core\task\scheduled_task {
             list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
             $params = array_merge($inparams, array($course->id), $inparams);
 
-            $sql = "SELECT ue.userid, cc.course, cc.timecompleted
+            $sql = "SELECT ue.id, ue.userid, MAX(cc.timecompleted) AS timecompleted
                     FROM {user_enrolments} ue
                     JOIN {enrol} e ON ue.enrolid = e.id
                   JOIN (SELECT userid, course, timecompleted 
@@ -475,57 +474,116 @@ class check_recompletion extends \core\task\scheduled_task {
                         UNION 
                         SELECT userid, course, timecompleted
                         FROM {local_recompletion_cc}) cc ON cc.userid = ue.userid
-                LEFT JOIN (SELECT userid, course, timecompleted 
-                        FROM {course_completions}
-                        UNION 
-                        SELECT userid, course, timecompleted
-                        FROM {local_recompletion_cc}) cc2 ON cc2.userid = cc.userid AND cc2.course $insql AND cc2.timecompleted > cc.timecompleted
                  WHERE ue.status = 0 AND e.status = 0
                    AND cc.timecompleted > 0
                    AND e.courseid = ?
                    AND cc.course $insql
-                   AND cc2.timecompleted IS NULL
-                   ORDER BY cc.timecompleted DESC";
+                   GROUP BY ue.id";
 
             $users = $DB->get_records_sql($sql, $params);
 
-            foreach ($users as $user) {
+            foreach ($users as $userinfo) {
                 // Don't send notification for same day recompletions.
-                if ($config->recompletionduration < 86400 || $config->notificationstart < 86400 || $config->frequency < 86400) {
+                if ($config->recompletionduration < DAYSECS || $config->notificationstart < DAYSECS || $config->frequency < DAYSECS) {
                     continue;
                 }
 
-                $expirationdate = $user->timecompleted + $config->recompletionduration;
-                $currentday = floor($time / 86400);
-                $expirationday = floor($expirationdate / 86400);
+                $expirationdate = $userinfo->timecompleted + $config->recompletionduration;
+                $currentday = floor($time / DAYSECS);
+                $expirationday = floor($expirationdate / DAYSECS);
 
-                if ($currentday == $expirationday) {
-                    $this->notify_user($user->userid, $course, $config);
-                } else if ($time > $expirationdate) {
-                    // No notifications needed for expired courses that have already passed expiration day
+                $frequencyday = floor($config->frequency / DAYSECS);
+
+                $daysfterreminderstarts = floor(($time - ($expirationday - $config->notificationstart)) / DAYSECS);
+
+                // Haven't reached notification start yet
+                if ($daysfterreminderstarts < 0) {
                     continue;
-                } else {
-                    $frequencyday = floor($config->frequency / 86400);
-
-                    $daysfterreminderstarts =
-                            floor(($time - ($expirationdate - $config->notificationstart)) /
-                                    86400);
-
-                    // Haven't reached notification start yet
-                    if ($daysfterreminderstarts < 0) {
-                        continue;
+                }
+                if (isset($config->bulknotification) && !empty($config->bulknotification)) {
+                    if ((date('j', $time) == 1) || (date('j', $time) == 15)) {
+                        $emaildetails = new \stdClass();
+                        $emaildetails->expirationdate = $expirationdate;
+                        $emaildetails->id = $course->id;
+                        $context = \context_course::instance($course->id);
+                        $emaildetails->coursename = format_string($course->fullname, true, array('context' => $context));
+                        $emaildetails->link = course_get_url($course->id)->out();
+                        if (!isset($bulkemail[$userinfo->userid])) {
+                            $bulkemail[$userinfo->userid] = array('outofcomp' => array(), 'comingdue' => array());
+                        }
+                        if ($currentday == $expirationday || $time >= $expirationdate) {
+                            $bulkemail[$userinfo->userid]['outofcomp'][] = $emaildetails;
+                        } else {
+                            $bulkemail[$userinfo->userid]['comingdue'][] = $emaildetails;
+                        }
+                    } else if ($currentday == $expirationday) {
+                        $this->notify_user($userinfo->userid, $course, $config);
                     }
-
-                    if ($daysfterreminderstarts % $frequencyday == 0) {
-                        $this->remind_user($user->userid, $course, $config);
-                    }
+                } else if ($currentday == $expirationday) {
+                    $this->notify_user($userinfo->userid, $course, $config);
+                } else if ($daysfterreminderstarts % $frequencyday == 0) {
+                    $this->remind_user($userinfo->userid, $course, $config);
                 }
             }
+        }
+
+        if (!empty($bulkemail)) {
+            $this->bulk_email_users($bulkemail);
         }
 
         set_config('notifylast', $time, 'local_recompletion');
 
         return true;
+    }
+
+    /**
+     * Sends out a bulk email that includes expiration information for each course that has expired or expires soon
+     * @param $usercourses array of expiring and coming due courses with user id as the key
+     */
+    protected function bulk_email_users($usercourses) {
+        global $DB, $CFG;
+
+        foreach ($usercourses as $userid => $courses) {
+            $userrecord = $DB->get_record('user', array('id' => $userid));
+
+            $from = $CFG->supportname;
+            $subject = get_string('bulknotification_emailsubject', 'local_recompletion');
+
+            $a = new \stdClass();
+            $a->name = fullname($userrecord);
+            $messagetext = get_string('bulknotification_emailbody', 'local_recompletion', $a);
+
+            $messageoutofcomp = '';
+            if (!empty($courses['outofcomp'])) {
+                usort($courses['outofcomp'], array($this, 'cmp_expiration'));
+                $messageoutofcomp = get_string('bulknotification_outofcomp', 'local_recompletion');
+                foreach ($courses['outofcomp'] as $course) {
+                    $date = date_format_string($course->expirationdate, '%B %e, %Y', $userrecord->timezone);
+                    $messageoutofcomp .= "<br><a href='$course->link'>$course->coursename</a> expired on $date.\n";
+                }
+            }
+            $messagecomingdue = '';
+            if (!empty($courses['comingdue'])) {
+                usort($courses['comingdue'], array($this, 'cmp_expiration'));
+                $messagecomingdue = get_string('bulknotification_comingdue', 'local_recompletion');
+                foreach ($courses['comingdue'] as $course) {
+                    $date = date_format_string($course->expirationdate, '%B %e, %Y', $userrecord->timezone);
+                    $messagecomingdue .= "<br><a href='$course->link'>$course->coursename</a> will expire on $date.\n";
+                }
+            }
+            $messagetext .= $messageoutofcomp;
+            $messagetext .= "\n";
+            $messagetext .= $messagecomingdue;
+
+            $messagehtml = text_to_html($messagetext, null, false, true);
+
+            // Directly emailing recompletion message rather than using messaging.
+            email_to_user($userrecord, $from, $subject, $messagetext, $messagehtml);
+        }
+    }
+
+    private function cmp_expiration($a, $b) {
+        return ($a->expirationdate < $b->expirationdate) ? -1: 1;
     }
 
     /**
@@ -536,16 +594,13 @@ class check_recompletion extends \core\task\scheduled_task {
     protected function remind_user($userid, $course, $config) {
         global $DB, $CFG;
 
-        if (!$config->recompletionemailenable) {
-            return;
-        }
-
         $userrecord = $DB->get_record('user', array('id' => $userid));
         $context = \context_course::instance($course->id);
-        $from = get_admin();
+        $from = $CFG->supportname;
         $a = new \stdClass();
         $a->coursename = format_string($course->fullname, true, array('context' => $context));
         $a->profileurl = "$CFG->wwwroot/user/view.php?id=$userrecord->id&course=$course->id";
+        $a->fullname = fullname($userrecord);
         $a->link = course_get_url($course)->out();
         if (trim($config->recompletionreminderbody) !== '') {
             $message = $config->recompletionreminderbody;

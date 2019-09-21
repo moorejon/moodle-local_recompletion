@@ -214,7 +214,7 @@ class local_recompletion_external extends external_api {
      * Update the course settings
      *
      * @param int $courseid the course id
-     * @param stdClass $settings The list of settings (currently only pushratingstouserplans).
+     * @param array $settings The list of settings (currently only pushratingstouserplans).
      * @throws moodle_exception
      */
     public static function update_course_settings($courseid, $settings) {
@@ -246,7 +246,7 @@ class local_recompletion_external extends external_api {
             } else {
                 $value = null;
             }
-            if ((!is_null($value) && $config[$name] <> $value) || !isset($config[$name])) {
+            if (!isset($config[$name]) || (!is_null($value) && $config[$name] <> $value)) {
                 if (in_array($name, $daybasedvariables)) {
                     $value = $value * 86400;
                 }

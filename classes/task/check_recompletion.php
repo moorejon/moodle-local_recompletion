@@ -323,6 +323,9 @@ class check_recompletion extends \core\task\scheduled_task {
             return;
         }
         $context = \context_course::instance($course->id);
+        if (!is_enrolled($context, $userid)) {
+            return;
+        }
         $from = $CFG->supportname;
         $a = new \stdClass();
         $a->coursename = format_string($course->fullname, true, array('context' => $context));
@@ -596,6 +599,9 @@ class check_recompletion extends \core\task\scheduled_task {
 
         $userrecord = $DB->get_record('user', array('id' => $userid));
         $context = \context_course::instance($course->id);
+        if (!is_enrolled($context, $userid)) {
+            return;
+        }
         $from = $CFG->supportname;
         $a = new \stdClass();
         $a->coursename = format_string($course->fullname, true, array('context' => $context));

@@ -464,7 +464,7 @@ class check_recompletion extends \core\task\scheduled_task {
 
             $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id, true);
             list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
-            $params = array_merge($inparams, array($course->id), $inparams);
+            $params = array_merge(array($course->id), $inparams);
 
             $sql = "SELECT ue.id, ue.userid, MAX(cc.timecompleted) AS timecompleted
                     FROM {user_enrolments} ue
@@ -521,7 +521,7 @@ class check_recompletion extends \core\task\scheduled_task {
                     }
                 } else if ($currentday == $expirationday) {
                     $this->notify_user($userinfo->userid, $course, $config);
-                } else if ($daysfterreminderstarts % $frequencyday == 0) {
+                } else if ($daysfterreminderstarts % $frequencyday == 0 && $time < $expirationdate) {
                     $this->remind_user($userinfo->userid, $course, $config);
                 }
             }

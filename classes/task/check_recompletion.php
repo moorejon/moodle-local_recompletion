@@ -357,7 +357,7 @@ class check_recompletion extends \core\task\scheduled_task {
             $subject = get_string('recompletionemaildefaultsubject', 'local_recompletion', $a);
         }
         // Directly emailing recompletion message rather than using messaging.
-        email_to_user($userrecord, $from, $subject, $messagetext, $messagehtml);
+        $this->recompletion_email_to_user($course->id, $userrecord, $from, $subject, $messagetext, $messagehtml);
     }
 
     /**
@@ -501,7 +501,13 @@ class check_recompletion extends \core\task\scheduled_task {
                     continue;
                 }
                 if (isset($config->bulknotification) && !empty($config->bulknotification)) {
-                    if ((date('j', $time) == 1) || (date('j', $time) == 15)) {
+                    if (!$bulknotificationday1 = get_config('local_recompletion', 'bulknotificationday1')) {
+                        $bulknotificationday1 = 1;
+                    }
+                    if (!$bulknotificationday2 = get_config('local_recompletion', 'bulknotificationday2')) {
+                        $bulknotificationday2 = 15;
+                    }
+                    if ((date('j', $time) == $bulknotificationday1) || (date('j', $time) == $bulknotificationday2)) {
                         $emaildetails = new \stdClass();
                         $emaildetails->expirationdate = $expirationdate;
                         $emaildetails->id = $course->id;
@@ -578,7 +584,7 @@ class check_recompletion extends \core\task\scheduled_task {
             $messagehtml = text_to_html($messagetext, null, false, true);
 
             // Directly emailing recompletion message rather than using messaging.
-            email_to_user($userrecord, $from, $subject, $messagetext, $messagehtml);
+            $this->recompletion_email_to_user(1, $userrecord, $from, $subject, $messagetext, $messagehtml);
         }
     }
 
@@ -630,18 +636,31 @@ class check_recompletion extends \core\task\scheduled_task {
             $subject = get_string('recompletionreminderdefaultsubject', 'local_recompletion', $a);
         }
         // Directly emailing recompletion message rather than using messaging.
+        $this->recompletion_email_to_user($course->id, $userrecord, $from, $subject, $messagetext, $messagehtml);
+    }
+
+    protected function recompletion_email_to_user($courseid, $userrecord, $from, $subject, $messagetext, $messagehtml) {
+        global $DB;
+
         if (email_to_user($userrecord, $from, $subject, $messagetext, $messagehtml)) {
             // Trigger event for this user.
-            $context = \context_course::instance($course->id);
+            $context = \context_course::instance($courseid);
             $event = \local_recompletion\event\reminder_sent::create(
-                array(
-                    'objectid'      => $course->id,
-                    'relateduserid' => $userid,
-                    'courseid' => $course->id,
-                    'context' => $context,
-                )
+                    array(
+                            'objectid'      => $courseid,
+                            'relateduserid' => $userrecord->id,
+                            'courseid' => $courseid,
+                            'context' => $context,
+                    )
             );
             $event->trigger();
+
+            if ($useremail = get_config('local_recompletion', 'recompletionthirdpartyemail')) {
+                if ($thirdpartyuser = $DB->get_record('user', ['email' => $useremail])) {
+                    $subject = '(THIRD PARTY) ' . $subject;
+                    email_to_user($thirdpartyuser, $from, $subject, $messagetext, $messagehtml);
+                }
+            }
         }
     }
 }

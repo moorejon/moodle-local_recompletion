@@ -22,11 +22,17 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+$string['bulknotificationday1'] = 'First bulk notification day';
+$string['bulknotificationday1_desc'] = 'The first day of the month to send a bulk notification';
+$string['bulknotificationday2'] = 'Second bulk notification day';
+$string['bulknotificationday2_desc'] = 'The second day of the month to send a bulk notification';
 $string['pluginname'] = 'Course recompletion';
-$string['recompletion'] = 'recompletion';
 $string['editrecompletion'] = 'Edit course recompletion settings';
 $string['enablerecompletion'] = 'Enable recompletion';
 $string['enablerecompletion_help'] = 'The recompletion plugin allows a course completion details to be reset after a defined period.';
+$string['recompletion'] = 'recompletion';
+$string['recompletionthirdpartyemail'] = 'Recompletion Third Party Recipient';
+$string['recompletionthirdpartyemail_desc'] = 'Optional setting to include a third party email on all recompletion notifications';
 $string['recompletionrange'] = 'Recompletion period';
 $string['recompletionrange_help'] = 'Set the period of time before a users completion results are reset.';
 $string['recompletionsettingssaved'] = 'Recompletion settings saved';
@@ -59,6 +65,7 @@ The following placeholders may be included in the message:
 $string['recompletionemaildefaultbody'] = 'Hello {$a->fullname}, 
 
 The course <a href="{$a->link}">{$a->coursename}</a> is now out of compliance.';
+$string['settings'] = 'Local recompletion settings';
 $string['advancedrecompletiontitle'] = 'Advanced';
 $string['deletegradedata'] = 'Delete all grades for the user';
 $string['deletegradedata_help'] = 'Delete current grade completion data from grade_grades table. Grade recompletion data is permanently deleted but data retained in Grade history data table.';

@@ -500,7 +500,7 @@ class check_recompletion extends \core\task\scheduled_task {
                 if ($daysfterreminderstarts < 0) {
                     continue;
                 }
-                if (isset($config->bulknotification) && !empty($config->bulknotification)) {
+                if (!isset($config->bulknotification) || $config->bulknotification == 1) {
                     if (!$bulknotificationday1 = get_config('local_recompletion', 'bulknotificationday1')) {
                         $bulknotificationday1 = 1;
                     }

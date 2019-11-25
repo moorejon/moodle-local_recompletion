@@ -494,10 +494,10 @@ class check_recompletion extends \core\task\scheduled_task {
 
                 $frequencyday = floor($config->frequency / DAYSECS);
 
-                $daysfterreminderstarts = floor(($time - ($expirationday - $config->notificationstart)) / DAYSECS);
+                $dayssincereminderstart = floor(($time - ($expirationdate - $config->notificationstart)) / DAYSECS);
 
                 // Haven't reached notification start yet
-                if ($daysfterreminderstarts < 0) {
+                if ($dayssincereminderstart < 0) {
                     continue;
                 }
                 if (!isset($config->bulknotification) || $config->bulknotification == 1) {
@@ -527,7 +527,7 @@ class check_recompletion extends \core\task\scheduled_task {
                     }
                 } else if ($currentday == $expirationday) {
                     $this->notify_user($userinfo->userid, $course, $config);
-                } else if ($daysfterreminderstarts % $frequencyday == 0 && $time < $expirationdate) {
+                } else if ($dayssincereminderstart % $frequencyday == 0 && $time < $expirationdate) {
                     $this->remind_user($userinfo->userid, $course, $config);
                 }
             }

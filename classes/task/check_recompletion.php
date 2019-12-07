@@ -522,8 +522,6 @@ class check_recompletion extends \core\task\scheduled_task {
                         } else {
                             $bulkemail[$userinfo->userid]['comingdue'][] = $emaildetails;
                         }
-                    } else if ($currentday == $expirationday) {
-                        $this->notify_user($userinfo->userid, $course, $config);
                     }
                 } else if ($currentday == $expirationday) {
                     $this->notify_user($userinfo->userid, $course, $config);

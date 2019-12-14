@@ -72,7 +72,11 @@ class helper {
 
     public static function get_last_equivalency_completion($userid, $courseid, $equivalencies) {
         global $DB;
-        $courseids = array_keys($equivalencies);
+        if (is_array($equivalencies)) {
+            $courseids = array_keys($equivalencies);
+        } else {
+            $courseids = array();
+        }
         $courseids[] = $courseid;
 
         list($insql, $params) = $DB->get_in_or_equal($courseids, SQL_PARAMS_NAMED, 'cor');
@@ -93,5 +97,22 @@ class helper {
                    ORDER BY cc.timecompleted DESC";
 
         return $DB->get_record_sql($sql, $params, IGNORE_MULTIPLE);
+    }
+
+    public static function get_user_course_due_date($userid, $courseid) {
+        global $DB;
+
+        $config = $DB->get_records_menu('local_recompletion_config', array('course' => $courseid), '', 'name, value');
+        if (isset($config['enable']) && $config['enable']) {
+            if (isset($config['recompletionduration']) && $config['recompletionduration']) {
+                $equivalents = \local_recompletion\helper::get_course_equivalencies($courseid);
+                $completiondatetime = \local_recompletion\helper::get_last_equivalency_completion($userid, $courseid, $equivalents);
+                $duedate = (int)$completiondatetime->timecompleted + (int)$config['recompletionduration'];
+
+                return $duedate;
+            }
+        }
+
+        return false;
     }
 }

@@ -159,6 +159,6 @@ $string['bulknotification_emailbody'] = 'Hello {$a->name},
 ';
 $string['bulknotification_outofcomp'] = 'The following courses are out of compliance:
 **************************************************************';
-$string['bulknotification_comingdue'] = 'The following courses are coming due within the next 90 days:
+$string['bulknotification_comingdue'] = 'The following courses are coming due:
 **************************************************************';
 $string['bulknotification_emailsubject'] = 'Course recompletion required';

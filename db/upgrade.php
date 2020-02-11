@@ -391,5 +391,27 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2019081500, 'local', 'recompletion');
     }
 
+    if ($oldversion < 2019081504) {
+
+        // Define index courseoneid_index (not unique) to be added to local_recompletion_equiv.
+        $table = new xmldb_table('local_recompletion_equiv');
+        $index = new xmldb_index('courseoneid_index', XMLDB_INDEX_NOTUNIQUE, ['courseoneid']);
+
+        // Conditionally launch add index courseoneid_index.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        $index = new xmldb_index('coursetwoid_index', XMLDB_INDEX_NOTUNIQUE, ['coursetwoid']);
+
+        // Conditionally launch add index coursetwoid_index.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2019081504, 'local', 'recompletion');
+    }
+
     return true;
 }

@@ -26,13 +26,22 @@
 defined('MOODLE_INTERNAL') || die();
 
 $tasks = array(
-    array(
-        'classname' => 'local_recompletion\task\check_recompletion',
-        'blocking' => 0,
-        'minute' => 'R',
-        'hour' => 'R',
-        'day' => '*',
-        'dayofweek' => '*',
-        'month' => '*'
-    )
+        array(
+                'classname' => 'local_recompletion\task\check_recompletion',
+                'blocking' => 0,
+                'minute' => 'R',
+                'hour' => 'R',
+                'day' => '*',
+                'dayofweek' => '*',
+                'month' => '*'
+        ),
+        array(
+                'classname' => 'local_recompletion\task\cache_completions',
+                'blocking' => 0,
+                'minute' => '*/5',
+                'hour' => '*',
+                'day' => '*',
+                'dayofweek' => '*',
+                'month' => '*'
+        )
 );

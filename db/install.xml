@@ -178,5 +178,23 @@
         <INDEX NAME="coursetwoid_index" UNIQUE="false" FIELDS="coursetwoid"/>
       </INDEXES>
     </TABLE>
+    <TABLE NAME="local_recompletion_cc_cached" COMMENT="Default comment for the table, please edit me">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="originalcomp" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="latestcomp" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid_index" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="courseid_index" UNIQUE="false" FIELDS="courseid"/>
+        <INDEX NAME="originalcomp_index" UNIQUE="false" FIELDS="originalcomp"/>
+        <INDEX NAME="latestcomp" UNIQUE="false" FIELDS="latestcomp"/>
+      </INDEXES>
+    </TABLE>
   </TABLES>
 </XMLDB>

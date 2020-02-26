@@ -69,7 +69,6 @@ class cache_completions extends \core\task\scheduled_task {
         $params = array('status' => COMPLETION_ENABLED);
         $sql = "SELECT c.id
             FROM {course} c
-            JOIN {local_recompletion_config} r ON r.course = c.id AND r.name = 'enable' AND r.value = '1'
             WHERE c.enablecompletion = :status
             AND c.visible = 1";
 

@@ -391,5 +391,57 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2019081500, 'local', 'recompletion');
     }
 
+    if ($oldversion < 2019081504) {
+
+        // Define index courseoneid_index (not unique) to be added to local_recompletion_equiv.
+        $table = new xmldb_table('local_recompletion_equiv');
+        $index = new xmldb_index('courseoneid_index', XMLDB_INDEX_NOTUNIQUE, ['courseoneid']);
+
+        // Conditionally launch add index courseoneid_index.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        $index = new xmldb_index('coursetwoid_index', XMLDB_INDEX_NOTUNIQUE, ['coursetwoid']);
+
+        // Conditionally launch add index coursetwoid_index.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2019081504, 'local', 'recompletion');
+    }
+
+    if ($oldversion < 2019081505) {
+
+        // Define table local_recompletion_cc_cached to be created.
+        $table = new xmldb_table('local_recompletion_cc_cached');
+
+        // Adding fields to table local_recompletion_cc_cached.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('originalcomp', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('latestcomp', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table local_recompletion_cc_cached.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Adding indexes to table local_recompletion_cc_cached.
+        $table->add_index('userid_index', XMLDB_INDEX_NOTUNIQUE, ['userid']);
+        $table->add_index('courseid_index', XMLDB_INDEX_NOTUNIQUE, ['courseid']);
+        $table->add_index('originalcomp_index', XMLDB_INDEX_NOTUNIQUE, ['originalcomp']);
+        $table->add_index('latestcomp', XMLDB_INDEX_NOTUNIQUE, ['latestcomp']);
+
+        // Conditionally launch create table for local_recompletion_cc_cached.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2019081505, 'local', 'recompletion');
+    }
+
     return true;
 }

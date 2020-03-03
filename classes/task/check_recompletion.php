@@ -97,6 +97,8 @@ class check_recompletion extends \core\task\scheduled_task {
         }
 
         $this->remind_users();
+
+        return true;
     }
 
     /**

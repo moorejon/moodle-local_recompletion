@@ -107,6 +107,11 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->setDefault('archivecompletiondata', 1);
         $mform->addHelpButton('archivecompletiondata', 'archivecompletiondata', 'local_recompletion');
 
+        $mform->addElement('checkbox', 'includeequivalentcourses', get_string('includeequivalentcourses', 'local_recompletion'));
+        $mform->setDefault('includeequivalentcourses', 0);
+        $mform->addHelpButton('includeequivalentcourses', 'includeequivalentcourses', 'local_recompletion');
+        $mform->disabledIf('includeequivalentcourses', 'enable', 'notchecked');
+
         $cba = array();
         $cba[] = $mform->createElement('radio', 'scormdata', '',
             get_string('donothing', 'local_recompletion'), LOCAL_RECOMPLETION_NOTHING);

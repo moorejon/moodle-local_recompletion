@@ -25,6 +25,7 @@
 
 namespace local_recompletion\task;
 
+use completion_completion;
 use local_recompletion\helper;
 
 defined('MOODLE_INTERNAL') || die();
@@ -39,7 +40,14 @@ defined('MOODLE_INTERNAL') || die();
  */
 class check_recompletion extends \core\task\scheduled_task {
 
+    /** @var array */
     protected $configs = array();
+
+    /** @var array */
+    protected $courses = array();
+
+    /** @var array */
+    protected $equivalents = array();
 
     /**
      * Returns the name of this task.
@@ -74,25 +82,27 @@ class check_recompletion extends \core\task\scheduled_task {
             WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND
             (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
         $users = $DB->get_records_sql($sql, array(time()));
-        $courses = array();
         foreach ($users as $user) {
-            if (!isset($courses[$user->course])) {
-                // Only get the course record for this course once.
-                $course = get_course($user->course);
-                $courses[$user->course] = $course;
-            } else {
-                $course = $courses[$user->course];
+            $course = $this->get_course_data($user->course);
+            $config = $this->get_config_data($user->course);
+            // Find equivalents of this course.
+            $equivalents = $this->get_equivalents_data($user->course);
+            foreach ($equivalents as $equivalentid => $data) {
+                $equivconfig = $this->get_config_data($equivalentid);
+                // If the equivalent has recompletions enabled and has the setting include equivalent courses
+                // and the equivalent is not completed then perform a reset.
+                if ($equivconfig->enable && $equivconfig->includeequivalentcourses) {
+                    $equivcourse = $this->get_course_data($equivalentid);
+                    $ccompletion = new completion_completion([
+                        'course' => $equivcourse->id,
+                        'userid' => $user->userid
+                    ]);
+                    if (!$ccompletion->is_complete()) {
+                        $this->reset_user($user->userid, $equivcourse, $equivconfig);
+                    }
+                }
             }
 
-            // Get recompletion config.
-            if (!isset($this->configs[$user->course])) {
-                // Only get the recompletion config record for this course once.
-                $config = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, value');
-                $config = (object) $config;
-                $this->configs[$user->course] = $config;
-            } else {
-                $config = $this->configs[$user->course];
-            }
             $this->reset_user($user->userid, $course, $config);
         }
 
@@ -100,6 +110,67 @@ class check_recompletion extends \core\task\scheduled_task {
 
         return true;
     }
+
+    /**
+     * Get course data.
+     * @param int $courseid The course id.
+     *
+     * @return mixed|\stdClass
+     * @throws \dml_exception
+     */
+    protected function get_course_data(int $courseid) {
+        if (!isset($this->courses[$courseid])) {
+            // Only get the course record for this course once.
+            $course = get_course($courseid);
+            $this->courses[$courseid] = $course;
+        } else {
+            $course = $this->courses[$courseid];
+        }
+
+        return $course;
+    }
+    /**
+     * Get config data.
+     * @param int $courseid The course id.
+     *
+     * @return mixed|\stdClass
+     * @throws \dml_exception
+     */
+    protected function get_config_data(int $courseid) {
+        global $DB;
+
+        if (!isset($this->configs[$courseid])) {
+            // Only get the recompletion config record for this course once.
+            $config = $DB->get_records_menu('local_recompletion_config',
+                array('course' => $courseid), '', 'name, value');
+            $config = (object) $config;
+            $this->configs[$courseid] = $config;
+        } else {
+            $config = $this->configs[$courseid];
+        }
+
+        return $config;
+    }
+
+    /**
+     * Get equivalents data.
+     * @param int $courseid The course id.
+     *
+     * @return mixed|\stdClass
+     * @throws \dml_exception
+     */
+    protected function get_equivalents_data(int $courseid) {
+        if (!isset($this->equivalents[$courseid])) {
+            // Only get the equivalents record for this course once.
+            $equivalents = helper::get_course_equivalencies($courseid, false);
+            $this->equivalents[$courseid] = $equivalents;
+        } else {
+            $equivalents = $this->equivalents[$courseid];
+        }
+
+        return $equivalents;
+    }
+
 
     /**
      * Reset and archive completion records
@@ -464,7 +535,7 @@ class check_recompletion extends \core\task\scheduled_task {
                 $config = $this->configs[$course->id];
             }
 
-            $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id, true);
+            $equivalents = helper::get_course_equivalencies($course->id, true);
             list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
             $params = array_merge(array($course->id), $inparams);
 

@@ -248,7 +248,7 @@ class local_recompletion_external extends external_api {
             } else {
                 $value = null;
             }
-            if ((!is_null($value) && $config[$name] <> $value) || !isset($config[$name])) {
+            if (!isset($config[$name]) || (!is_null($value) && $config[$name] <> $value)) {
                 if (in_array($name, $daybasedvariables)) {
                     $value = $value * 86400;
                 }

@@ -61,7 +61,7 @@ class helper {
                          UNION
                         SELECT eq1.courseoneid courseid
                           FROM {local_recompletion_equiv} eq1
-                         WHERE eq1.coursetwoid = ?
+                         WHERE eq1.coursetwoid = ? AND eq1.unidirectional = 0
                          $includeselfsql
                        ) AS eqv
                   JOIN {course} c 

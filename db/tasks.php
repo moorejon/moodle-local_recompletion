@@ -43,5 +43,14 @@ $tasks = array(
                 'day' => '*',
                 'dayofweek' => '*',
                 'month' => '*'
+        ),
+        array(
+                'classname' => 'local_recompletion\task\out_of_compliance',
+                'blocking' => 0,
+                'minute' => '0',
+                'hour' => '0',
+                'day' => '*',
+                'dayofweek' => '*',
+                'month' => '*'
         )
 );

@@ -443,6 +443,38 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2019081505, 'local', 'recompletion');
     }
 
+    if ($oldversion < 2019081506) {
+
+        // Define table local_recompletion_outcomp to be created.
+        $table = new xmldb_table('local_recompletion_outcomp');
+
+        // Define table local_recompletion_outcomp to be created.
+        $table = new xmldb_table('local_recompletion_outcomp');
+
+        // Adding fields to table local_recompletion_outcomp.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '18', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('courseid', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timesynced', XMLDB_TYPE_INTEGER, '18', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('synced', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table local_recompletion_outcomp.
+        $table->add_key('id', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table local_recompletion_outcomp.
+        $table->add_index('mdl_locarecooutc_use_ix', XMLDB_INDEX_NOTUNIQUE, array('userid'));
+        $table->add_index('mdl_locarecooutc_cou_ix', XMLDB_INDEX_NOTUNIQUE, array('courseid'));
+
+        // Conditionally launch create table for local_recompletion_outcomp.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2019081506, 'local', 'recompletion');
+    }
+
+
     if ($oldversion < 2020031801) {
 
         // Add field unidirectional to local_recompletion_equiv.
@@ -454,6 +486,6 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         // Recompletion savepoint reached.
         upgrade_plugin_savepoint(true, 2020031801, 'local', 'recompletion');
     }
-
+  
     return true;
 }

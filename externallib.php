@@ -1090,4 +1090,135 @@ class local_recompletion_external extends external_api {
         );
     }
 
+    /**
+     * Returns description of get_out_of_compliants() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function get_out_of_compliants_parameters() {
+        return new external_function_parameters(
+            array(
+                'synced' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0)
+            )
+        );
+    }
+
+    /**
+     * Get course recompletions
+     *
+     * @param int $courseid the course id
+     * @throws moodle_exception
+     */
+    public static function get_out_of_compliants($synced = 0) {
+        global $DB;
+
+        // Validate params
+        $params = self::validate_parameters(self::get_out_of_compliants_parameters(), ['synced' => $synced]);
+
+        $context = context_system::instance();
+        self::validate_context($context);
+
+        $rs = $DB->get_recordset('local_recompletion_outcomp', array('synced' => $params['synced']));
+
+        $return = array('outofcompliants' => array());
+
+        foreach ($rs as $rec) {
+            $return['outofcompliants'][] = (array) $rec;
+        }
+
+        $rs->close();
+
+        return $return;
+    }
+
+    /**
+     * Returns description of get_out_of_compliants() result value.
+     *
+     * @return \external_value
+     */
+    public static function get_out_of_compliants_returns() {
+        return new external_single_structure(
+            array(
+                'outofcompliants'   => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'Record ID'),
+                            'userid' => new external_value(PARAM_TEXT, 'User Idnumber'),
+                            'courseid' => new external_value(PARAM_TEXT, 'Course Idnumber'),
+                            'timesynced' => new external_value(PARAM_INT, 'Timestamp for sync'),
+                            'synced' => new external_value(PARAM_INT, 'Is it synced')
+                        )
+                    )
+                )
+            )
+        );
+    }
+
+
+    /**
+     * Returns description of mark_out_of_compliants_parameters() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function mark_out_of_compliants_parameters() {
+        return new external_function_parameters(
+            array(
+                'ids' => new external_multiple_structure(
+                    new external_value(PARAM_INT, 'Recor IDs'), 'An array of IDs', VALUE_DEFAULT, array()
+                )
+            )
+        );
+    }
+
+    /**
+     * Get Course completions
+     *
+     * @param array $ids An array of record IDs
+     * @return array of course completions
+     * @throws moodle_exception
+     */
+    public static function mark_out_of_compliants($ids) {
+        global $CFG, $DB;
+
+        require_once($CFG->dirroot . '/course/lib.php');
+
+        $params = self::validate_parameters(
+            self::mark_out_of_compliants_parameters(),
+            array('ids' => $ids)
+        );
+
+        if (!$params['ids']) {
+            return false;
+        }
+
+        list($insql, $params) = $DB->get_in_or_equal($params['ids'], SQL_PARAMS_NAMED, 'rec');
+
+        $sql = "SELECT o.*
+                  FROM {local_recompletion_outcomp} o
+                  WHERE o.id {$insql}";
+
+        $rs = $DB->get_recordset_sql($sql, $params);
+        foreach ($rs as $data) {
+            $rec = new \stdClass();
+            $rec->id = $data->id;
+            $rec->synced = 1;
+
+            if (!$DB->update_record('local_recompletion_outcomp', $rec)) {
+                return false;
+            }
+        }
+        $rs->close();
+
+        return true;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     */
+    public static function mark_out_of_compliants_returns() {
+        return new external_value(PARAM_BOOL, 'True if the update was successful.');
+    }
+
 }

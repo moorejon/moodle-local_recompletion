@@ -905,6 +905,7 @@ class local_recompletion_external extends external_api {
             array(
                 'courseoneid' => new external_value(PARAM_INT, '', VALUE_REQUIRED),
                 'coursetwoid' => new external_value(PARAM_INT, '', VALUE_REQUIRED),
+                'unidirectional' => new external_value(PARAM_BOOL, '', VALUE_REQUIRED),
             )
         );
     }
@@ -915,11 +916,12 @@ class local_recompletion_external extends external_api {
      * @param int $courseoneid the course one id
      * @param int $coursetwoid the course two id
      */
-    public static function create_course_equivalent($courseoneid, $coursetwoid) {
+    public static function create_course_equivalent($courseoneid, $coursetwoid, $unidirectional) {
         global $DB;
         $params = self::validate_parameters(self::create_course_equivalent_parameters(), array(
             'courseoneid' => $courseoneid,
             'coursetwoid' => $coursetwoid,
+            'unidirectional' => $unidirectional,
         ));
 
         $courseone = $DB->get_record('course', array('id' => $params['courseoneid']), "*", MUST_EXIST);
@@ -941,6 +943,7 @@ class local_recompletion_external extends external_api {
         $obj = new \stdClass();
         $obj->courseoneid = $params['courseoneid'];
         $obj->coursetwoid = $params['coursetwoid'];
+        $obj->unidirectional = $params['unidirectional'];
 
         if ($DB->insert_record('local_recompletion_equiv', $obj)) {
             return true;

@@ -443,5 +443,17 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2019081505, 'local', 'recompletion');
     }
 
+    if ($oldversion < 2020031801) {
+
+        // Add field unidirectional to local_recompletion_equiv.
+        $table = new xmldb_table('local_recompletion_equiv');
+        $field = new xmldb_field('unidirectional', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'coursetwoid');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2020031801, 'local', 'recompletion');
+    }
+
     return true;
 }

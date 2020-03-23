@@ -137,4 +137,20 @@ $functions = array(
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
         'ajax'          => true,
     ),
+    'local_recompletion_get_out_of_compliants' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'get_out_of_compliants',
+        'description'   => 'Get records from local_recompletion_outcomp table',
+        'type'          => 'read',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
+    'local_recompletion_mark_out_of_compliants' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'mark_out_of_compliants',
+        'description'   => 'Mark as synced',
+        'type'          => 'write',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
 );

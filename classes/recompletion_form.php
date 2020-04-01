@@ -64,6 +64,10 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->addHelpButton('frequency', 'frequency', 'local_recompletion');
         $mform->disabledIf('frequency', 'enable', 'notchecked');
 
+        $mform->addElement('checkbox', 'autocompletewithequivalent', get_string('autocompletewithequivalent', 'local_recompletion'));
+        $mform->setDefault('autocompletewithequivalent', 0);
+        $mform->disabledIf('autocompletewithequivalent', 'enable', 'notchecked');
+
         // Email Notification settings.
         $mform->addElement('header', 'emailheader', get_string('emailrecompletiontitle', 'local_recompletion'));
         $mform->setExpanded('emailheader', false);

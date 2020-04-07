@@ -688,7 +688,8 @@ class local_recompletion_external extends external_api {
         $comp->timestarted = $params['timestarted'];
         $comp->reaggregate = $params['reaggregate'];
 
-        if ($DB->insert_record('course_completions', $comp)) {
+        if ($comp->id = $DB->insert_record('course_completions', $comp)) {
+            \core\event\course_completed::create_from_completion($comp)->trigger();
             return true;
         } else {
             return false;

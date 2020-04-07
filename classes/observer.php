@@ -52,7 +52,7 @@ class observer {
         }
 
         foreach ($equivalents as $equivalent) {
-            if (!$autocompletewithequivalent = $DB->get_field('local_recompletion_config', 'value', ['course' => $courseid, 'name' => 'autocompletewithequivalent'])) {
+            if (!$autocompletewithequivalent = $DB->get_field('local_recompletion_config', 'value', ['course' => $equivalent->courseid, 'name' => 'autocompletewithequivalent'])) {
                 continue;
             }
             if ($completion = $DB->get_record('course_completions', ['userid' => $userid, 'course' => $equivalent->courseid])) {
@@ -67,7 +67,8 @@ class observer {
                 $data->userid = $userid;
                 $data->course = $equivalent->courseid;
                 $data->timecompleted = $eventdata->timecompleted;
-                $DB->insert_record('course_completions', $data);
+                $data->id = $DB->insert_record('course_completions', $data);
+                \core\event\course_completed::create_from_completion($data)->trigger();
             }
         }
 

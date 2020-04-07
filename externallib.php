@@ -1167,7 +1167,7 @@ class local_recompletion_external extends external_api {
         return new external_function_parameters(
             array(
                 'ids' => new external_multiple_structure(
-                    new external_value(PARAM_INT, 'Recor IDs'), 'An array of IDs', VALUE_DEFAULT, array()
+                    new external_value(PARAM_INT, 'Record IDs'), 'An array of IDs', VALUE_DEFAULT, array()
                 )
             )
         );

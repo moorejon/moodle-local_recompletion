@@ -77,6 +77,11 @@ class out_of_compliance extends \core\task\scheduled_task {
 
         foreach ($courses as $courseid) {
             $course = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
+            $users = get_enrolled_users(\context_course::instance($courseid));
+
+            if (empty($users)) {
+                continue;
+            }
 
             if (empty($course->idnumber)) {
                 continue;
@@ -89,34 +94,33 @@ class out_of_compliance extends \core\task\scheduled_task {
             $equivalents = \local_recompletion\helper::get_course_equivalencies($courseid, true);
 
             $params = array($courseid);
-            list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
+            list($courseinsql, $courseinparams) = $DB->get_in_or_equal(array_keys($equivalents));
+            list($userinsql, $userinparams) = $DB->get_in_or_equal(array_keys($users));
 
-            $params = array_merge($params, $inparams);
+            $params = array_merge($params, $courseinparams, $userinparams);
 
             // Find last completion.
-            $sql = "SELECT comp.userid, comp.timeenrolled, MAX(comp.timecompleted) as timecompleted
-                 FROM (SELECT *, '0' AS archived
+            $sql = "SELECT u.id as userid, MAX(comp.timecompleted) as timecompleted
+                 FROM {user} u
+                 LEFT JOIN (SELECT *, '0' AS archived
                        FROM {course_completions} AS cc
                        UNION
                        SELECT *, '1' AS archived
-                       FROM {local_recompletion_cc} AS lc) comp
-                 WHERE comp.course $insql
-              GROUP BY comp.userid";
+                       FROM {local_recompletion_cc} AS lc) comp ON comp.userid = u.id
+                 WHERE comp.course $courseinsql
+                   AND u.id $userinsql
+              GROUP BY u.id";
 
             $rs = $DB->get_recordset_sql($sql, $params);
             foreach ($rs as $completion) {
-                $user = $DB->get_record('user', array('id' => $completion->userid), '*', MUST_EXIST);
+                $user = $users[$completion->userid];
 
                 if (empty($user->idnumber)) {
                     continue;
                 }
 
                 $outofcompliant = false;
-                if (empty($completion->timecompleted)
-                    && !empty($completion->timeenrolled)
-                    && ($completion->timeenrolled + $config->recompletionduration) < time()) {
-                    $outofcompliant = true;
-                } else if (($completion->timecompleted + $config->recompletionduration) < time()) {
+                if (empty($completion->timecompleted) || (($completion->timecompleted + $config->recompletionduration) < time())) {
                     $outofcompliant = true;
                 }
                 if ($outofcompliant) {

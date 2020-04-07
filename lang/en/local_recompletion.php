@@ -162,4 +162,6 @@ $string['bulknotification_outofcomp'] = 'The following courses are out of compli
 $string['bulknotification_comingdue'] = 'The following courses are coming due:
 **************************************************************';
 $string['bulknotification_emailsubject'] = 'Course recompletion required';
+
 $string['outofcompliancerecords'] = 'Out of compliance records';
+$string['autocompletewithequivalent'] = 'Auto complete with equivalent';

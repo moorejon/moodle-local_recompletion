@@ -15,17 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version details.
+ * Event handlers
  *
  * @package    local_recompletion
- * @copyright  2017 Dan Marsden
+ * @author     Michael Gardener <mgardener@cissq.com>
+ * @copyright  2020 Michael Gardener
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die;
+defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2020031802;
-$plugin->release   = '1.7';
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->requires  = 2017102700; // Requires 3.4.
-$plugin->component = 'local_recompletion';
+$observers = [
+    [
+        'eventname' => '\core\event\course_completed',
+        'callback' => '\local_recompletion\observer::course_completed'
+    ],
+];

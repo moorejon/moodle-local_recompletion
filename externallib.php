@@ -203,7 +203,9 @@ class local_recompletion_external extends external_api {
                         'recompletionemailbody' => new external_value(PARAM_RAW, 'Recompletion message body', VALUE_OPTIONAL),
 
                         'recompletionremindersubject' => new external_value(PARAM_RAW, 'Recompletion reminder subject', VALUE_OPTIONAL),
-                        'recompletionreminderbody' => new external_value(PARAM_RAW, 'Recompletion reminder message body', VALUE_OPTIONAL)
+                        'recompletionreminderbody' => new external_value(PARAM_RAW, 'Recompletion reminder message body', VALUE_OPTIONAL),
+
+                        'includeequivalentcourses' => new external_value(PARAM_INT, 'Include equivalent courses', VALUE_OPTIONAL)
                     )
                 )
             )
@@ -227,7 +229,7 @@ class local_recompletion_external extends external_api {
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
             'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-            'recompletionreminderbody');
+            'recompletionreminderbody', 'includeequivalentcourses');
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
@@ -246,7 +248,7 @@ class local_recompletion_external extends external_api {
             } else {
                 $value = null;
             }
-            if ((!is_null($value) && $config[$name] <> $value) || !isset($config[$name])) {
+            if (!isset($config[$name]) || (!is_null($value) && $config[$name] <> $value)) {
                 if (in_array($name, $daybasedvariables)) {
                     $value = $value * 86400;
                 }
@@ -503,7 +505,7 @@ class local_recompletion_external extends external_api {
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
             'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-            'recompletionreminderbody');
+            'recompletionreminderbody', 'includeequivalentcourses');
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
@@ -549,7 +551,8 @@ class local_recompletion_external extends external_api {
                 'notificationstart' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
                 'frequency' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
                 'recompletionremindersubject' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
-                'recompletionreminderbody' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL)
+                'recompletionreminderbody' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
+                'includeequivalentcourses' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
             )
         );
     }

@@ -130,6 +130,8 @@ $string['notificationstart'] = 'Notification start';
 $string['notificationstart_help'] = 'Eexample 2 weeks prior, 1 month prior, etc';
 $string['frequency'] = 'Frequency';
 $string['frequency_help'] = 'Example every week, every 2 weeks etc';
+$string['graceperiod'] = 'Grace period duration';
+$string['graceperiod_help'] = 'Example 10 days grace, 1 weeks grace etc';
 $string['recompletionremindersubject'] = 'Recompletion reminder subject';
 $string['recompletionremindersubject_help'] = 'A custom recompletion email subject may be added as plain text
 
@@ -148,9 +150,14 @@ The following placeholders may be included in the message:
 * Link to user\'s profile page {$a->profileurl}
 * User email {$a->email}
 * User fullname {$a->fullname}';
+
 $string['recompletionreminderdefaultbody'] = 'Hello {$a->fullname}, 
 
 You will need to recomplete the course <a href="{$a->link}">{$a->coursename}</a> soon.';
+$string['recompletiongraceperioddefaultsubject'] = 'Course {$a->coursename} grace period';
+$string['recompletiongraceperioddefaultbody'] = 'Hello {$a->fullname}, 
+
+The grace period for the <a href="{$a->link}">{$a->coursename}</a> course is {$a->graceperiod} days, you will need to complete this course before the grace period expires or you will be out of compliance.';
 $string['eventrecompletionreminder'] = 'Course recompletion reminder';
 $string['errorgreaterperiod'] = 'It must be less than "Recompletion period"';
 $string['bulknotification'] = 'Enable bulk notification';

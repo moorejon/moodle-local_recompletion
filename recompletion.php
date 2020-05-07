@@ -73,7 +73,10 @@ $PAGE->requires->js_amd_inline("
             $('#id_notificationstart_timeunit option[value=3600]').remove();            
             $('#id_frequency_timeunit option[value=1]').remove();
             $('#id_frequency_timeunit option[value=60]').remove();
-            $('#id_frequency_timeunit option[value=3600]').remove();            
+            $('#id_frequency_timeunit option[value=3600]').remove();
+            $('#id_graceperiod_timeunit option[value=1]').remove();
+            $('#id_graceperiod_timeunit option[value=60]').remove();
+            $('#id_graceperiod_timeunit option[value=3600]').remove();              
         });");
 
 // This seems a bit messy - would be nice to tidy this up a bit.
@@ -82,8 +85,8 @@ $idmap = $DB->get_records_menu('local_recompletion_config', array('course' => $c
 
 $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
     'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
-    'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-    'recompletionreminderbody', 'autocompletewithequivalent');
+    'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency',
+    'graceperiod', 'recompletionremindersubject', 'recompletionreminderbody', 'autocompletewithequivalent');
 
 // Create the settings form instance.
 $form = new local_recompletion_recompletion_form('recompletion.php?id='.$id, array('course' => $course));

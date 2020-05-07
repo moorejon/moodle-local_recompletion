@@ -30,4 +30,8 @@ $observers = [
         'eventname' => '\core\event\course_completed',
         'callback' => '\local_recompletion\observer::course_completed'
     ],
+    [
+        'eventname' => '\core\event\user_enrolment_created',
+        'callback' => '\local_recompletion\observer::user_enrolment_created'
+    ],
 ];

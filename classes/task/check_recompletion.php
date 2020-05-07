@@ -96,6 +96,7 @@ class check_recompletion extends \core\task\scheduled_task {
             $this->reset_user($user->userid, $course, $config);
         }
 
+        $this->grace_period_inform_users();
         $this->remind_users();
 
         return true;
@@ -468,7 +469,7 @@ class check_recompletion extends \core\task\scheduled_task {
             list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
             $params = array_merge(array($course->id), $inparams);
 
-            $sql = "SELECT ue.id, ue.userid, MAX(cc.timecompleted) AS timecompleted
+            $sql = "SELECT ue.id, ue.userid, GREATEST(ue.timecreated, ue.timestart) AS timestart, MAX(cc.timecompleted) AS timecompleted
                     FROM {user_enrolments} ue
                     JOIN {enrol} e ON ue.enrolid = e.id
                   JOIN (SELECT userid, course, timecompleted 
@@ -496,6 +497,8 @@ class check_recompletion extends \core\task\scheduled_task {
 
                 $frequencyday = floor($config->frequency / DAYSECS);
 
+                $graceperiod = $userinfo->timestart + $config->graceperiod;
+
                 $dayssincereminderstart = floor(($time - ($expirationdate - $config->notificationstart)) / DAYSECS);
 
                 // Haven't reached notification start yet
@@ -519,15 +522,15 @@ class check_recompletion extends \core\task\scheduled_task {
                         if (!isset($bulkemail[$userinfo->userid])) {
                             $bulkemail[$userinfo->userid] = array('outofcomp' => array(), 'comingdue' => array());
                         }
-                        if ($currentday == $expirationday || $time >= $expirationdate) {
+                        if (($currentday == $expirationday || $time >= $expirationdate) && ($time > $graceperiod)) {
                             $bulkemail[$userinfo->userid]['outofcomp'][] = $emaildetails;
                         } else {
                             $bulkemail[$userinfo->userid]['comingdue'][] = $emaildetails;
                         }
                     }
-                } else if ($currentday == $expirationday) {
+                } else if (($currentday >= $expirationday) && ($time > $graceperiod)) {
                     $this->notify_user($userinfo->userid, $course, $config);
-                } else if ($dayssincereminderstart % $frequencyday == 0 && $time < $expirationdate) {
+                } else if (($dayssincereminderstart % $frequencyday == 0 && $time < $expirationdate) || ($time <= $graceperiod)) {
                     $this->remind_user($userinfo->userid, $course, $config);
                 }
             }
@@ -637,6 +640,47 @@ class check_recompletion extends \core\task\scheduled_task {
         }
         // Directly emailing recompletion message rather than using messaging.
         $this->recompletion_email_to_user($course->id, $userrecord, $from, $subject, $messagetext, $messagehtml);
+    }
+
+    /**
+     * Inform newly enrolled users of grace period.
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    protected function grace_period_inform_users() {
+        global $CFG, $DB;
+
+        $sql = "SELECT u.*, lrg.courseid, cfggraceperion.value AS graceperiod
+                  FROM {user} u
+                  INNER JOIN {local_recompletion_grace} lrg ON lrg.userid = u.id
+                  INNER JOIN {local_recompletion_config} cfggraceperion ON cfggraceperion.course = lrg.courseid
+                         AND cfggraceperion.name = 'graceperiod'";
+
+        $users = $DB->get_records_sql($sql);
+
+        $courses = [];
+        foreach ($users as $userrecord) {
+            if (!isset($courses[$userrecord->courseid])) {
+                // Only get the course record for this course once.
+                $course = get_course($userrecord->courseid);
+                $courses[$userrecord->courseid] = $course;
+            } else {
+                $course = $courses[$userrecord->courseid];
+            }
+
+            $context = \context_course::instance($course->id);
+            $from = $CFG->supportname;
+            $a = new \stdClass();
+            $a->coursename = format_string($course->fullname, true, array('context' => $context));
+            $a->fullname = fullname($userrecord);
+            $a->link = course_get_url($course)->out();
+            $a->graceperiod = floor($userrecord->graceperiod / DAYSECS);
+            $messagetext = get_string('recompletiongraceperioddefaultbody', 'local_recompletion', $a);
+            $messagehtml = text_to_html($messagetext, null, false, true);
+            $subject = get_string('recompletiongraceperioddefaultsubject', 'local_recompletion', $a);
+            $this->recompletion_email_to_user($course->id, $userrecord, $from, $subject, $messagetext, $messagehtml);
+        }
+        $DB->delete_records('local_recompletion_grace');
     }
 
     protected function recompletion_email_to_user($courseid, $userrecord, $from, $subject, $messagetext, $messagehtml) {

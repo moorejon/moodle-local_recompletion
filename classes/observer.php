@@ -35,6 +35,7 @@ defined('MOODLE_INTERNAL') || die();
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class observer {
+
     public static function course_completed(\core\event\course_completed $event) {
         global $DB, $CFG;
 
@@ -78,5 +79,35 @@ class observer {
         }
 
         return true;
+    }
+
+    /**
+     * @param \core\event\user_enrolment_created $event
+     *
+     * @throws \dml_exception
+     */
+    public static function user_enrolment_created(\core\event\user_enrolment_created $event) {
+        global $DB;
+
+        $data = $event->get_data();
+        $sql = "SELECT ue.userid FROM {user_enrolments} ue 
+                INNER JOIN {enrol} e ON e.id = ue.enrolid
+                INNER JOIN {course} c ON c.id = e.courseid
+                INNER JOIN {local_recompletion_config} rc ON rc.course = c.id AND rc.name = 'enable' AND rc.value = '1'
+                INNER JOIN {local_recompletion_config} rc2 ON rc2.course = c.id AND rc2.name = 'graceperiod' AND rc2.value > '0'
+                WHERE ue.id = ?";
+        $userid = $DB->get_field_sql($sql, [$data['objectid']]);
+
+        if ($userid) {
+            $grace = (object) [
+                'userid' => $data['relateduserid'],
+                'courseid' => $data['courseid']
+            ];
+            try {
+                $DB->insert_record('local_recompletion_grace', $grace);
+            } catch (\dml_exception $exception) {
+                // Ignore a duplicate.
+            }
+        }
     }
 }

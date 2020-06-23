@@ -1101,7 +1101,8 @@ class local_recompletion_external extends external_api {
     public static function get_out_of_compliants_parameters() {
         return new external_function_parameters(
             array(
-                'synced' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0)
+                'synced' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0),
+                'limit' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0)
             )
         );
     }
@@ -1109,19 +1110,21 @@ class local_recompletion_external extends external_api {
     /**
      * Get course recompletions
      *
-     * @param int $courseid the course id
+     * @param int $synced Synced or not
+     * @param int $limit Number of record limit: Zero means no limit
      * @throws moodle_exception
      */
-    public static function get_out_of_compliants($synced = 0) {
+    public static function get_out_of_compliants($synced = 0, $limit = 1000) {
         global $DB;
 
         // Validate params
-        $params = self::validate_parameters(self::get_out_of_compliants_parameters(), ['synced' => $synced]);
+        $params = self::validate_parameters(self::get_out_of_compliants_parameters(),
+            ['synced' => $synced, 'limit' => $limit]);
 
         $context = context_system::instance();
         self::validate_context($context);
 
-        $rs = $DB->get_recordset('local_recompletion_outcomp', array('synced' => $params['synced']));
+        $rs = $DB->get_recordset('local_recompletion_outcomp', array('synced' => $params['synced']), '', '*', 0, $params['limit']);
 
         $return = array('outofcompliants' => array());
 
@@ -1224,4 +1227,76 @@ class local_recompletion_external extends external_api {
         return new external_value(PARAM_BOOL, 'True if the update was successful.');
     }
 
+    /**
+     * Returns description of get_user_compliance_rate_parameters() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function get_user_compliance_rate_parameters() {
+        return new external_function_parameters(
+            array(
+                'userid' => new external_value(PARAM_INT, '', VALUE_REQUIRED),
+            )
+        );
+    }
+
+    /**
+     * Get Course completions
+     *
+     * @param array $userid User ID
+     * @return array of course completions
+     * @throws moodle_exception
+     */
+    public static function get_user_compliance_rate($userid) {
+        global $CFG, $DB;
+
+        require_once($CFG->dirroot . '/course/lib.php');
+
+        $params = self::validate_parameters(
+            self::get_user_compliance_rate_parameters(),
+            array('userid' => $userid)
+        );
+
+        $return = [
+            'complete' => 0,
+            'comingdue' => 0,
+            'expired' => 0,
+        ];
+
+        if ($courses = enrol_get_all_users_courses($params['userid'])) {
+            foreach ($courses as $course) {
+                if ($duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id)) {
+                    if ($duedate > time()) {
+                        $return['comingdue']++;
+                    } else {
+                        $return['expired']++;
+                    }
+                }
+            }
+        }
+
+        $sql = "SELECT COUNT(1)
+                  FROM (SELECT * FROM {course_completions} cc WHERE cc.timecompleted > 0 
+                  UNION SELECT * FROM {local_recompletion_cc} lr) comp
+                  WHERE comp.userid = ?";
+
+        $return['complete'] = $DB->count_records_sql($sql, [$params['userid']]);
+
+        return $return;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     */
+    public static function get_user_compliance_rate_returns() {
+        return new external_single_structure(
+            array(
+                'complete' => new external_value(PARAM_INT, 'The count of courses that are complete.'),
+                'comingdue' => new external_value(PARAM_INT, 'The count of courses that are coming due.'),
+                'expired' => new external_value(PARAM_INT, 'The count of courses that are expired.'),
+            )
+        );
+    }
 }

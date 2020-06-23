@@ -153,4 +153,12 @@ $functions = array(
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
         'ajax'          => true,
     ),
+    'local_recompletion_get_user_compliance_rate' => array(
+        'classname'     => 'local_recompletion_external',
+        'methodname'    => 'get_user_compliance_rate',
+        'description'   => 'Mark as synced',
+        'type'          => 'write',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'ajax'          => true,
+    ),
 );

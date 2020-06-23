@@ -1102,7 +1102,7 @@ class local_recompletion_external extends external_api {
         return new external_function_parameters(
             array(
                 'synced' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0),
-                'limit' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0)
+                'limit' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 1000)
             )
         );
     }

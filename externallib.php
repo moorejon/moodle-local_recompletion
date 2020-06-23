@@ -1101,7 +1101,8 @@ class local_recompletion_external extends external_api {
     public static function get_out_of_compliants_parameters() {
         return new external_function_parameters(
             array(
-                'synced' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0)
+                'synced' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0),
+                'limit' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0)
             )
         );
     }
@@ -1109,19 +1110,21 @@ class local_recompletion_external extends external_api {
     /**
      * Get course recompletions
      *
-     * @param int $courseid the course id
+     * @param int $synced Synced or not
+     * @param int $limit Number of record limit: Zero means no limit
      * @throws moodle_exception
      */
-    public static function get_out_of_compliants($synced = 0) {
+    public static function get_out_of_compliants($synced = 0, $limit = 1000) {
         global $DB;
 
         // Validate params
-        $params = self::validate_parameters(self::get_out_of_compliants_parameters(), ['synced' => $synced]);
+        $params = self::validate_parameters(self::get_out_of_compliants_parameters(),
+            ['synced' => $synced, 'limit' => $limit]);
 
         $context = context_system::instance();
         self::validate_context($context);
 
-        $rs = $DB->get_recordset('local_recompletion_outcomp', array('synced' => $params['synced']));
+        $rs = $DB->get_recordset('local_recompletion_outcomp', array('synced' => $params['synced']), '', '*', 0, $params['limit']);
 
         $return = array('outofcompliants' => array());
 

@@ -1263,24 +1263,36 @@ class local_recompletion_external extends external_api {
             'expired' => 0,
         ];
 
+        $countedcourseids = [];
+
         if ($courses = enrol_get_all_users_courses($params['userid'])) {
             foreach ($courses as $course) {
                 if ($duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id)) {
                     if ($duedate > time()) {
                         $return['comingdue']++;
+                        $countedcourseids[] = $course->id;
                     } else {
                         $return['expired']++;
+                        $countedcourseids[] = $course->id;
                     }
                 }
             }
         }
 
-        $sql = "SELECT COUNT(1)
+        $insql = '';
+        $queryparams = [];
+        if ($countedcourseids) {
+            list($insql, $queryparams) = $DB->get_in_or_equal($countedcourseids, SQL_PARAMS_NAMED, 'cr', false);
+            $insql = " AND comp.course {$insql}";
+        }
+        $queryparams['userid'] = $params['userid'];
+
+        $sql = "SELECT COUNT(DISTINCT comp.course)
                   FROM (SELECT * FROM {course_completions} cc WHERE cc.timecompleted > 0 
                   UNION SELECT * FROM {local_recompletion_cc} lr) comp
-                  WHERE comp.userid = ?";
+                  WHERE comp.userid = :userid $insql";
 
-        $return['complete'] = $DB->count_records_sql($sql, [$params['userid']]);
+        $return['complete'] = $DB->count_records_sql($sql, $queryparams);
 
         return $return;
     }

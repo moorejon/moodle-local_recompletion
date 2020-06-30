@@ -105,9 +105,10 @@ class helper {
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $courseid), '', 'name, value');
         if (isset($config['enable']) && $config['enable']) {
             if (isset($config['recompletionduration']) && $config['recompletionduration']) {
-                $equivalents = \local_recompletion\helper::get_course_equivalencies($courseid);
-                $completiondatetime = \local_recompletion\helper::get_last_equivalency_completion($userid, $courseid, $equivalents);
-                $duedate = (int)$completiondatetime->timecompleted + (int)$config['recompletionduration'];
+                if (!$cache = $DB->get_record('local_recompletion_cc_cached', ['userid'=>$userid, 'courseid'=>$courseid])) {
+                    return false;
+                }
+                $duedate = (int)$cache->latestcomp + (int)$config['recompletionduration'] - (int)$config['notificationstart'];
 
                 return $duedate;
             }

@@ -1263,7 +1263,7 @@ class local_recompletion_external extends external_api {
             'expired' => 0,
         ];
 
-        if ($courses = enrol_get_all_users_courses($params['userid'])) {
+        if ($courses = enrol_get_all_users_courses($params['userid'], true)) {
             $now = time();
             foreach ($courses as $course) {
                 $completionenabled = $DB->get_field('course', 'enablecompletion', array('id' => $course->id));

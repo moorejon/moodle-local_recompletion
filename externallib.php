@@ -1290,6 +1290,8 @@ class local_recompletion_external extends external_api {
                     }
                 } else if ($completion) {
                     $return['complete']++;
+                } else {
+                    $return['expired']++;
                 }
             }
         }

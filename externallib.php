@@ -1263,36 +1263,36 @@ class local_recompletion_external extends external_api {
             'expired' => 0,
         ];
 
-        $countedcourseids = [];
-
         if ($courses = enrol_get_all_users_courses($params['userid'])) {
+            $now = time();
             foreach ($courses as $course) {
-                if ($duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id)) {
-                    if ($duedate > time()) {
-                        $return['comingdue']++;
-                        $countedcourseids[] = $course->id;
-                    } else {
-                        $return['expired']++;
-                        $countedcourseids[] = $course->id;
+                $handler = \core_course\customfield\course_handler::get_handler('core_course', 'course');
+                $datas = $handler->get_instance_data($course->id);
+                foreach ($datas as $data) {
+                    if ($data->get_field()->get('shortname') == 'course_tied_to_compliance') {
+                        $tiedtocompliance = $data->get_value();
+                        break;
                     }
+                }
+                if (!$tiedtocompliance) {
+                    continue;
+                }
+                $completion = $DB->get_record('local_recompletion_cc_cached', ['userid' => $userid, 'courseid' => $course->id]);
+                $duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id, true);
+                $notificationstart = \local_recompletion\helper::get_user_course_notificationstart_date($params['userid'], $course->id, true);
+                if ($duedate) {
+                    if ($now > $duedate) {
+                        $return['expired']++;
+                    } else if ($notificationstart && $now > $notificationstart) {
+                        $return['comingdue']++;
+                    } else {
+                        $return['complete']++;
+                    }
+                } else if ($completion) {
+                    $return['complete']++;
                 }
             }
         }
-
-        $insql = '';
-        $queryparams = [];
-        if ($countedcourseids) {
-            list($insql, $queryparams) = $DB->get_in_or_equal($countedcourseids, SQL_PARAMS_NAMED, 'cr', false);
-            $insql = " AND comp.course {$insql}";
-        }
-        $queryparams['userid'] = $params['userid'];
-
-        $sql = "SELECT COUNT(DISTINCT comp.course)
-                  FROM (SELECT * FROM {course_completions} cc WHERE cc.timecompleted > 0 
-                  UNION SELECT * FROM {local_recompletion_cc} lr) comp
-                  WHERE comp.userid = :userid $insql";
-
-        $return['complete'] = $DB->count_records_sql($sql, $queryparams);
 
         return $return;
     }

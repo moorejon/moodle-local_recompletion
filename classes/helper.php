@@ -99,18 +99,37 @@ class helper {
         return $DB->get_record_sql($sql, $params, IGNORE_MULTIPLE);
     }
 
-    public static function get_user_course_due_date($userid, $courseid) {
+    public static function get_user_course_due_date($userid, $courseid, $usecachedvalues = false) {
         global $DB;
 
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $courseid), '', 'name, value');
+        $duedate = false;
         if (isset($config['enable']) && $config['enable']) {
             if (isset($config['recompletionduration']) && $config['recompletionduration']) {
-                if (!$cache = $DB->get_record('local_recompletion_cc_cached', ['userid'=>$userid, 'courseid'=>$courseid])) {
-                    return false;
+                if (!$usecachedvalues || !$cache = $DB->get_record('local_recompletion_cc_cached', ['userid'=>$userid, 'courseid'=>$courseid])) {
+                    $equivalents = \local_recompletion\helper::get_course_equivalencies($courseid);
+                    $completiondatetime =
+                            \local_recompletion\helper::get_last_equivalency_completion($userid, $courseid, $equivalents);
+                    if ($completiondatetime) {
+                        $duedate = (int) $completiondatetime->timecompleted + (int) $config['recompletionduration'];
+                    }
+                } else {
+                    $duedate = (int)$cache->latestcomp + (int)$config['recompletionduration'];
                 }
-                $duedate = (int)$cache->latestcomp + (int)$config['recompletionduration'] - (int)$config['notificationstart'];
+            }
+        }
 
-                return $duedate;
+        return $duedate;
+    }
+
+    public static function get_user_course_notificationstart_date($userid, $courseid, $usecachedvalues = false) {
+        global $DB;
+
+        $config = $DB->get_records_menu('local_recompletion_config', array('course' => $courseid), '', 'name, value');
+        if (isset($config['enable']) && $config['enable'] && isset($config['notificationstart']) && $config['notificationstart']) {
+            $duedate = self::get_user_course_due_date($userid, $courseid, $usecachedvalues);
+            if ($duedate) {
+                return $duedate - (int) $config['notificationstart'];
             }
         }
 

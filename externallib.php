@@ -1267,7 +1267,7 @@ class local_recompletion_external extends external_api {
             $now = time();
             foreach ($courses as $course) {
                 $handler = \core_course\customfield\course_handler::get_handler('core_course', 'course');
-                $datas = $handler->get_instance_data($course->id);
+                $datas = $handler->get_instance_data($course->id, true);
                 foreach ($datas as $data) {
                     if ($data->get_field()->get('shortname') == 'course_tied_to_compliance') {
                         $tiedtocompliance = $data->get_value();
@@ -1277,7 +1277,7 @@ class local_recompletion_external extends external_api {
                 if (!$tiedtocompliance) {
                     continue;
                 }
-                $completion = $DB->get_record('local_recompletion_cc_cached', ['userid' => $userid, 'courseid' => $course->id]);
+                $completion = $DB->get_record('local_recompletion_cc_cached', ['userid' => $params['userid'], 'courseid' => $course->id]);
                 $duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id, true);
                 $notificationstart = \local_recompletion\helper::get_user_course_notificationstart_date($params['userid'], $course->id, true);
                 if ($duedate) {

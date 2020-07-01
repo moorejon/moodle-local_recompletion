@@ -1266,6 +1266,10 @@ class local_recompletion_external extends external_api {
         if ($courses = enrol_get_all_users_courses($params['userid'])) {
             $now = time();
             foreach ($courses as $course) {
+                $completionenabled = $DB->get_field('course', 'enablecompletion', array('id' => $course->id));
+                if (!$completionenabled) {
+                    continue;
+                }
                 $handler = \core_course\customfield\course_handler::get_handler('core_course', 'course');
                 $datas = $handler->get_instance_data($course->id, true);
                 foreach ($datas as $data) {

@@ -469,7 +469,7 @@ class check_recompletion extends \core\task\scheduled_task {
             list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
             $params = array_merge(array($course->id), $inparams);
 
-            $sql = "SELECT ue.id, ue.userid, GREATEST(ue.timecreated, ue.timestart) AS timestart, MAX(cc.timecompleted) AS timecompleted
+            $sql = "SELECT ue.id, ue.userid, MAX(cc.timecompleted) AS timecompleted
                     FROM {user_enrolments} ue
                     JOIN {enrol} e ON ue.enrolid = e.id
                   JOIN (SELECT userid, course, timecompleted 
@@ -491,13 +491,11 @@ class check_recompletion extends \core\task\scheduled_task {
                     continue;
                 }
 
-                $expirationdate = $userinfo->timecompleted + $config->recompletionduration;
+                $expirationdate = helper::get_user_course_due_date($userinfo->userid, $course->id, true, true);
                 $currentday = floor($time / DAYSECS);
                 $expirationday = floor($expirationdate / DAYSECS);
 
                 $frequencyday = floor($config->frequency / DAYSECS);
-
-                $graceperiod = $userinfo->timestart + $config->graceperiod;
 
                 $dayssincereminderstart = floor(($time - ($expirationdate - $config->notificationstart)) / DAYSECS);
 
@@ -522,15 +520,15 @@ class check_recompletion extends \core\task\scheduled_task {
                         if (!isset($bulkemail[$userinfo->userid])) {
                             $bulkemail[$userinfo->userid] = array('outofcomp' => array(), 'comingdue' => array());
                         }
-                        if (($currentday == $expirationday || $time >= $expirationdate) && ($time > $graceperiod)) {
+                        if ($currentday == $expirationday || $time >= $expirationdate) {
                             $bulkemail[$userinfo->userid]['outofcomp'][] = $emaildetails;
                         } else {
                             $bulkemail[$userinfo->userid]['comingdue'][] = $emaildetails;
                         }
                     }
-                } else if (($currentday >= $expirationday) && ($time > $graceperiod)) {
+                } else if ($currentday == $expirationday) {
                     $this->notify_user($userinfo->userid, $course, $config);
-                } else if (($dayssincereminderstart % $frequencyday == 0 && $time < $expirationdate) || ($time <= $graceperiod)) {
+                } else if ($dayssincereminderstart % $frequencyday == 0 && $time < $expirationdate) {
                     $this->remind_user($userinfo->userid, $course, $config);
                 }
             }

@@ -1282,7 +1282,7 @@ class local_recompletion_external extends external_api {
                     continue;
                 }
                 $completion = $DB->get_record('local_recompletion_cc_cached', ['userid' => $params['userid'], 'courseid' => $course->id]);
-                $duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id, true);
+                $duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id, true, true);
                 $notificationstart = \local_recompletion\helper::get_user_course_notificationstart_date($params['userid'], $course->id, true);
                 if ($duedate) {
                     if ($now > $duedate) {

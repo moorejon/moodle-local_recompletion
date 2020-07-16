@@ -117,12 +117,7 @@ class helper {
                     $duedate = (int)$cache->latestcomp + (int)$config['recompletionduration'];
                 }
                 if ($graceperiod && !empty($config['graceperiod'])) {
-                    $sql = "SELECT GREATEST(ue.timecreated, ue.timestart) FROM {user_enrolments} ue
-                            JOIN {enrol} e ON ue.enrolid = e.id
-                            WHERE e.courseid = :courseid
-                            AND ue.userid = :userid";
-                    $params = ['courseid' => $courseid, 'userid' => $userid];
-                    $timestart = $DB->get_field_sql($sql, $params);
+                    $timestart = self::get_user_course_timestart($userid, $courseid);
                     $graceperiod = 0;
                     if ($timestart) {
                         $graceperiod = $timestart + $config['graceperiod'];
@@ -149,5 +144,18 @@ class helper {
         }
 
         return false;
+    }
+
+    public static function get_user_course_timestart($userid, $courseid) {
+        global $DB;
+
+        $sql = "SELECT GREATEST(ue.timecreated, ue.timestart) FROM {user_enrolments} ue
+                            JOIN {enrol} e ON ue.enrolid = e.id
+                            WHERE e.courseid = :courseid
+                            AND ue.userid = :userid";
+        $params = ['courseid' => $courseid, 'userid' => $userid];
+        $timestart = $DB->get_field_sql($sql, $params);
+
+        return $timestart;
     }
 }

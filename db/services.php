@@ -161,4 +161,20 @@ $functions = array(
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
         'ajax'          => true,
     ),
+    'local_recompletion_get_completions' => array(
+            'classname'     => 'local_recompletion_external',
+            'methodname'    => 'get_completions',
+            'description'   => 'Get records from local_recompletion_com table',
+            'type'          => 'read',
+            'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+            'ajax'          => true,
+    ),
+    'local_recompletion_mark_completions' => array(
+            'classname'     => 'local_recompletion_external',
+            'methodname'    => 'mark_completions_synced',
+            'description'   => 'Mark as synced',
+            'type'          => 'write',
+            'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+            'ajax'          => true,
+    ),
 );

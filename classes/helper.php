@@ -118,12 +118,12 @@ class helper {
                 }
                 if ($graceperiod && !empty($config['graceperiod'])) {
                     $timestart = self::get_user_course_timestart($userid, $courseid);
-                    $graceperiod = 0;
+                    $graceperiodtime = 0;
                     if ($timestart) {
-                        $graceperiod = $timestart + $config['graceperiod'];
+                        $graceperiodtime = $timestart + $config['graceperiod'];
                     }
-                    if ($graceperiod > $duedate) {
-                        $duedate = $graceperiod;
+                    if (empty($duedate)) {
+                        $duedate = $graceperiodtime;
                     }
                 }
             }

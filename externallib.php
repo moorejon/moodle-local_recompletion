@@ -1285,9 +1285,9 @@ class local_recompletion_external extends external_api {
                 $duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id, true, true);
                 $notificationstart = \local_recompletion\helper::get_user_course_notificationstart_date($params['userid'], $course->id, true);
                 if ($duedate) {
-                    if ($now > $duedate) {
+                    if ($now >= $duedate) {
                         $return['expired']++;
-                    } else if ($notificationstart && $now > $notificationstart) {
+                    } else if (($notificationstart && $now >= $notificationstart) || empty($completion)) {
                         $return['comingdue']++;
                     } else {
                         $return['complete']++;

@@ -64,6 +64,10 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->addHelpButton('frequency', 'frequency', 'local_recompletion');
         $mform->disabledIf('frequency', 'enable', 'notchecked');
 
+        $mform->addElement('duration', 'graceperiod', get_string('graceperiod', 'local_recompletion'), $options);
+        $mform->addHelpButton('graceperiod', 'graceperiod', 'local_recompletion');
+        $mform->disabledIf('graceperiod', 'enable', 'notchecked');
+
         $mform->addElement('checkbox', 'autocompletewithequivalent', get_string('autocompletewithequivalent', 'local_recompletion'));
         $mform->setDefault('autocompletewithequivalent', 0);
         $mform->disabledIf('autocompletewithequivalent', 'enable', 'notchecked');

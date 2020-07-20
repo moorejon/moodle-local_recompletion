@@ -113,6 +113,15 @@ class out_of_compliance extends \core\task\scheduled_task {
 
             $rs = $DB->get_recordset_sql($sql, $params);
             foreach ($rs as $completion) {
+                $graceperiod = 0;
+                if (!empty($config->graceperiod)) {
+                    if (empty($completion->timecompleted)) {
+                        $timestart = helper::get_user_course_timestart($completion->userid, $courseid);
+                        if ($timestart) {
+                            $graceperiod = $timestart + $config->graceperiod;
+                        }
+                    }
+                }
                 $user = $users[$completion->userid];
 
                 if (empty($user->idnumber)) {
@@ -120,7 +129,8 @@ class out_of_compliance extends \core\task\scheduled_task {
                 }
 
                 $outofcompliant = false;
-                if (empty($completion->timecompleted) || (($completion->timecompleted + $config->recompletionduration) < time())) {
+                if ((empty($completion->timecompleted) && (empty($graceperiod) || $graceperiod <= time())) ||
+                        (!empty($completion->timecompleted) && ($completion->timecompleted + $config->recompletionduration) <= time())) {
                     $outofcompliant = true;
                 }
                 if ($outofcompliant) {
@@ -132,7 +142,6 @@ class out_of_compliance extends \core\task\scheduled_task {
                     $DB->insert_record('local_recompletion_outcomp', $rec);
                 }
             }
-            $rs->close();
         }
 
         return true;

@@ -99,7 +99,7 @@ class helper {
         return $DB->get_record_sql($sql, $params, IGNORE_MULTIPLE);
     }
 
-    public static function get_user_course_due_date($userid, $courseid, $usecachedvalues = false) {
+    public static function get_user_course_due_date($userid, $courseid, $usecachedvalues = false, $graceperiod = false) {
         global $DB;
 
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $courseid), '', 'name, value');
@@ -115,6 +115,16 @@ class helper {
                     }
                 } else {
                     $duedate = (int)$cache->latestcomp + (int)$config['recompletionduration'];
+                }
+                if ($graceperiod && !empty($config['graceperiod'])) {
+                    $timestart = self::get_user_course_timestart($userid, $courseid);
+                    $graceperiodtime = 0;
+                    if ($timestart) {
+                        $graceperiodtime = $timestart + $config['graceperiod'];
+                    }
+                    if (empty($duedate)) {
+                        $duedate = $graceperiodtime;
+                    }
                 }
             }
         }
@@ -134,5 +144,18 @@ class helper {
         }
 
         return false;
+    }
+
+    public static function get_user_course_timestart($userid, $courseid) {
+        global $DB;
+
+        $sql = "SELECT GREATEST(ue.timecreated, ue.timestart) FROM {user_enrolments} ue
+                            JOIN {enrol} e ON ue.enrolid = e.id
+                            WHERE e.courseid = :courseid
+                            AND ue.userid = :userid";
+        $params = ['courseid' => $courseid, 'userid' => $userid];
+        $timestart = $DB->get_field_sql($sql, $params);
+
+        return $timestart;
     }
 }

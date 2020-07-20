@@ -204,7 +204,8 @@ class local_recompletion_external extends external_api {
 
                         'recompletionremindersubject' => new external_value(PARAM_RAW, 'Recompletion reminder subject', VALUE_OPTIONAL),
                         'recompletionreminderbody' => new external_value(PARAM_RAW, 'Recompletion reminder message body', VALUE_OPTIONAL),
-                        'autocompletewithequivalent' => new external_value(PARAM_INT, 'Auto complete with equivalent courses', VALUE_OPTIONAL)
+                        'autocompletewithequivalent' => new external_value(PARAM_INT, 'Auto complete with equivalent courses', VALUE_OPTIONAL),
+                        'graceperiod' => new external_value(PARAM_INT, 'Grace period in days', VALUE_OPTIONAL)
                     )
                 )
             )
@@ -228,7 +229,7 @@ class local_recompletion_external extends external_api {
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
             'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-            'recompletionreminderbody', 'autocompletewithequivalent');
+            'recompletionreminderbody', 'autocompletewithequivalent', 'graceperiod');
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
@@ -240,7 +241,7 @@ class local_recompletion_external extends external_api {
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $params['courseid']), '', 'name, value');
         $idmap = $DB->get_records_menu('local_recompletion_config', array('course' => $params['courseid']), '', 'name, id');
 
-        $daybasedvariables = array('recompletionduration', 'notificationstart', 'frequency');
+        $daybasedvariables = array('recompletionduration', 'notificationstart', 'frequency', 'graceperiod');
         foreach ($setnames as $name) {
             if (isset($params['settings'][$name])) {
                 $value = $params['settings'][$name];
@@ -1282,12 +1283,12 @@ class local_recompletion_external extends external_api {
                     continue;
                 }
                 $completion = $DB->get_record('local_recompletion_cc_cached', ['userid' => $params['userid'], 'courseid' => $course->id]);
-                $duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id, true);
+                $duedate = \local_recompletion\helper::get_user_course_due_date($params['userid'], $course->id, true, true);
                 $notificationstart = \local_recompletion\helper::get_user_course_notificationstart_date($params['userid'], $course->id, true);
                 if ($duedate) {
-                    if ($now > $duedate) {
+                    if ($now >= $duedate) {
                         $return['expired']++;
-                    } else if ($notificationstart && $now > $notificationstart) {
+                    } else if (($notificationstart && $now >= $notificationstart) || empty($completion)) {
                         $return['comingdue']++;
                     } else {
                         $return['complete']++;

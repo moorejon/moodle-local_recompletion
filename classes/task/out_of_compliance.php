@@ -129,7 +129,8 @@ class out_of_compliance extends \core\task\scheduled_task {
                 }
 
                 $outofcompliant = false;
-                if ((empty($completion->timecompleted) && $graceperiod && $graceperiod < time()) || (($completion->timecompleted + $config->recompletionduration) < time())) {
+                if ((empty($completion->timecompleted) && (empty($graceperiod) || $graceperiod <= time())) ||
+                        (!empty($completion->timecompleted) && ($completion->timecompleted + $config->recompletionduration) <= time())) {
                     $outofcompliant = true;
                 }
                 if ($outofcompliant) {
@@ -141,7 +142,6 @@ class out_of_compliance extends \core\task\scheduled_task {
                     $DB->insert_record('local_recompletion_outcomp', $rec);
                 }
             }
-            $rs->close();
         }
 
         return true;

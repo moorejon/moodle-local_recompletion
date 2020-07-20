@@ -51,7 +51,10 @@ class remove_old_synced extends \core\task\scheduled_task {
     public function execute() {
         global $DB;
 
-        $tables = ['local_recompletion_com'];
+        $tables = [
+                'local_recompletion_com',
+                'local_recompletion_outcomp'
+        ];
         $timestamp = strtotime("-30 Days");
 
         foreach($tables as $table) {

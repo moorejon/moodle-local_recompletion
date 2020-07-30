@@ -514,6 +514,27 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         // Recompletion savepoint reached.
         upgrade_plugin_savepoint(true, 2020050600, 'local', 'recompletion');
     }
-  
+
+    if ($oldversion < 2020050602) {
+        $defaultvalue = 30 * DAYSECS;
+        $rs = $DB->get_recordset('local_recompletion_config', ['name' => 'enable', 'value' => '1']);
+        foreach ($rs as $recompletion) {
+            if ($grace = $DB->get_record('local_recompletion_config', ['name' => 'graceperiod', 'course' => $recompletion->course])) {
+                $grace->value = $defaultvalue;
+                $DB->update_record('local_recompletion_config', $grace);
+            } else {
+                $grace = new stdClass();
+                $grace->course = $recompletion->course;
+                $grace->name = 'graceperiod';
+                $grace->value = $defaultvalue;
+                $DB->insert_record('local_recompletion_config', $grace);
+            }
+        }
+        $rs->close();
+
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2020050602, 'local', 'recompletion');
+    }
+
     return true;
 }

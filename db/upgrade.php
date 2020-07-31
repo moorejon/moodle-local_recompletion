@@ -517,7 +517,10 @@ function xmldb_local_recompletion_upgrade($oldversion) {
 
     if ($oldversion < 2020050602) {
         $defaultvalue = 30 * DAYSECS;
-        $rs = $DB->get_recordset('local_recompletion_config', ['name' => 'enable', 'value' => '1']);
+        $sql = "SELECT c.id as course, enable.value as enable
+            FROM {course} c
+            JOIN {local_recompletion_config} enable ON enable.course = c.id AND enable.name = 'enable' AND enable.value = '1'";
+        $rs = $DB->get_recordset_sql($sql);
         foreach ($rs as $recompletion) {
             if ($grace = $DB->get_record('local_recompletion_config', ['name' => 'graceperiod', 'course' => $recompletion->course])) {
                 $grace->value = $defaultvalue;

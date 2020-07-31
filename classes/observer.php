@@ -93,12 +93,9 @@ class observer {
         $sql = "SELECT ue.id FROM {user_enrolments} ue 
                 INNER JOIN {enrol} e ON e.id = ue.enrolid
                 INNER JOIN {course} c ON c.id = e.courseid
-                INNER JOIN {customfield_data} course_tied_to_compliance ON course_tied_to_compliance.instanceid = c.id AND course_tied_to_compliance.fieldid = (SELECT cf.id FROM {customfield_field} cf WHERE cf.shortname = 'course_tied_to_compliance')
-                INNER JOIN {local_recompletion_config} rc ON rc.course = c.id AND rc.name = 'enable' AND rc.value = '1'
                 INNER JOIN {local_recompletion_config} rc2 ON rc2.course = c.id AND rc2.name = 'graceperiod' AND rc2.value > '0'
                 WHERE c.id = ?
-                AND ue.userid = ?
-                AND course_tied_to_compliance.intvalue = 1";
+                AND ue.userid = ?";
         $userenrolments = $DB->get_records_sql($sql, array($data['courseid'], $data['relateduserid']));
 
         if ($userenrolments && count($userenrolments) == 1) {

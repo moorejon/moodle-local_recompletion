@@ -67,7 +67,6 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->addElement('duration', 'graceperiod', get_string('graceperiod', 'local_recompletion'), $options);
         $mform->addHelpButton('graceperiod', 'graceperiod', 'local_recompletion');
         $mform->disabledIf('graceperiod', 'enable', 'notchecked');
-        $mform->setDefault('graceperiod', 30 * DAYSECS);
 
         $mform->addElement('checkbox', 'autocompletewithequivalent', get_string('autocompletewithequivalent', 'local_recompletion'));
         $mform->setDefault('autocompletewithequivalent', 0);

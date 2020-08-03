@@ -90,7 +90,7 @@ class observer {
         global $DB;
 
         $data = $event->get_data();
-        $sql = "SELECT ue.id FROM {user_enrolments} ue 
+        $sql = "SELECT ue.id, ue.timestart FROM {user_enrolments} ue 
                 INNER JOIN {enrol} e ON e.id = ue.enrolid
                 INNER JOIN {course} c ON c.id = e.courseid
                 INNER JOIN {local_recompletion_config} rc2 ON rc2.course = c.id AND rc2.name = 'graceperiod' AND rc2.value > '0'
@@ -101,7 +101,8 @@ class observer {
         if ($userenrolments && count($userenrolments) == 1) {
             $grace = (object) [
                 'userid' => $data['relateduserid'],
-                'courseid' => $data['courseid']
+                'courseid' => $data['courseid'],
+                'timestart' => $userenrolments[$data['objectid']]->timestart
             ];
             try {
                 $DB->insert_record('local_recompletion_grace', $grace);

@@ -648,7 +648,7 @@ class check_recompletion extends \core\task\scheduled_task {
     protected function grace_period_inform_users() {
         global $CFG, $DB;
 
-        $sql = "SELECT u.*, lrg.courseid, cfggraceperion.value AS graceperiod
+        $sql = "SELECT u.*, lrg.courseid, lrg.timestart, cfggraceperion.value AS graceperiod
                   FROM {user} u
                   INNER JOIN {local_recompletion_grace} lrg ON lrg.userid = u.id
                   INNER JOIN {local_recompletion_config} cfggraceperion ON cfggraceperion.course = lrg.courseid
@@ -672,7 +672,7 @@ class check_recompletion extends \core\task\scheduled_task {
             $a->coursename = format_string($course->fullname, true, array('context' => $context));
             $a->fullname = fullname($userrecord);
             $a->link = course_get_url($course)->out();
-            $a->graceperiod = floor($userrecord->graceperiod / DAYSECS);
+            $a->graceperiod = date('m/d/Y', ($userrecord->timestart + $userrecord->graceperiod));
             $messagetext = get_string('recompletiongraceperioddefaultbody', 'local_recompletion', $a);
             $messagehtml = text_to_html($messagetext, null, false, true);
             $subject = get_string('recompletiongraceperioddefaultsubject', 'local_recompletion', $a);

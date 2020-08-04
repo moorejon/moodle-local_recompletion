@@ -174,3 +174,4 @@ $string['bulknotification_emailsubject'] = 'Course recompletion required';
 
 $string['outofcompliancerecords'] = 'Out of compliance records';
 $string['autocompletewithequivalent'] = 'Auto complete with equivalent';
+$string['recompletewithequivalent'] = 'Re-complete based on equivalent courses';

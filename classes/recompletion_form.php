@@ -71,6 +71,10 @@ class local_recompletion_recompletion_form extends moodleform {
         $mform->setDefault('autocompletewithequivalent', 0);
         $mform->disabledIf('autocompletewithequivalent', 'enable', 'notchecked');
 
+        $mform->addElement('checkbox', 'recompletewithequivalent', get_string('recompletewithequivalent', 'local_recompletion'));
+        $mform->setDefault('recompletewithequivalent', 0);
+        $mform->disabledIf('recompletewithequivalent', 'enable', 'notchecked');
+
         // Email Notification settings.
         $mform->addElement('header', 'emailheader', get_string('emailrecompletiontitle', 'local_recompletion'));
         $mform->setExpanded('emailheader', false);

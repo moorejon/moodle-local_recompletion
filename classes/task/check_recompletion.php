@@ -41,6 +41,8 @@ class check_recompletion extends \core\task\scheduled_task {
 
     protected $configs = array();
 
+    protected $courses = array();
+
     /**
      * Returns the name of this task.
      */
@@ -76,30 +78,87 @@ class check_recompletion extends \core\task\scheduled_task {
         $users = $DB->get_records_sql($sql, array(time()));
         $courses = array();
         foreach ($users as $user) {
-            if (!isset($courses[$user->course])) {
-                // Only get the course record for this course once.
-                $course = get_course($user->course);
-                $courses[$user->course] = $course;
-            } else {
-                $course = $courses[$user->course];
-            }
+            // Get course data.
+            $course = $this->build_course($user->course);
 
             // Get recompletion config.
-            if (!isset($this->configs[$user->course])) {
-                // Only get the recompletion config record for this course once.
-                $config = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, value');
-                $config = (object) $config;
-                $this->configs[$user->course] = $config;
-            } else {
-                $config = $this->configs[$user->course];
-            }
+            $config = $this->build_config($user->course);
             $this->reset_user($user->userid, $course, $config);
+            // Reset equivalent courses if needed
+            $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id);
+            foreach ($equivalents as $equivalent) {
+                $eqvcourse = $this->build_course($equivalent->courseid);
+                $equivconfig = $this->build_config($equivalent->courseid);
+                if ($equivconfig->recompletewithequivalent) {
+                    $this->reset_user($user->userid, $eqvcourse, $equivconfig);
+                    $this->update_equivalents_completed_time($user->userid, $course->id, $eqvcourse->id);
+                }
+            }
         }
 
         $this->grace_period_inform_users();
         $this->remind_users();
 
         return true;
+    }
+
+    /**
+     * Build course cache
+     * @param $courseid
+     * @return mixed|\stdClass
+     * @throws \dml_exception
+     */
+    protected function build_course($courseid) {
+        if (!isset($this->courses[$courseid])) {
+            // Only get the course record for this course once.
+            $course = get_course($courseid);
+            $this->courses[$courseid] = $course;
+        } else {
+            $course = $this->courses[$courseid];
+        }
+        return $course;
+    }
+
+    /**
+     * Build config cache
+     * @param $courseid
+     * @return mixed|object
+     * @throws \dml_exception
+     */
+    protected function build_config($courseid) {
+        global $DB;
+
+        if (!isset($this->configs[$courseid])) {
+            // Only get the recompletion config record for this course once.
+            $config = $DB->get_records_menu('local_recompletion_config', array('course' => $courseid), '', 'name, value');
+            $config = (object) $config;
+            $this->configs[$courseid] = $config;
+        } else {
+            $config = $this->configs[$courseid];
+        }
+        return $config;
+    }
+
+    /**
+     * Set timecompleted in local_recompletion_cc for equivalent course
+     * @param $userid
+     * @param $courseid
+     * @param $equivcourseid
+     * @throws \dml_exception
+     */
+    protected function update_equivalents_completed_time($userid, $courseid, $equivcourseid) {
+        global $DB;
+
+        $timecompleted = $DB->get_field('local_recompletion_cc', 'timecompleted', [
+                'userid' => $userid,
+                'course' => $courseid
+        ]);
+        if ($timecompleted) {
+            $DB->set_field('local_recompletion_cc', 'timecompleted', $timecompleted, [
+                    'userid' => $userid,
+                    'course' => $equivcourseid
+            ]);
+        }
     }
 
     /**

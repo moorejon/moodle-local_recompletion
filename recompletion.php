@@ -83,10 +83,10 @@ $PAGE->requires->js_amd_inline("
 $config = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, value');
 $idmap = $DB->get_records_menu('local_recompletion_config', array('course' => $course->id), '', 'name, id');
 
-$setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
+$setnames = array('graceperiod', 'enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
     'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
     'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency',
-    'graceperiod', 'recompletionremindersubject', 'recompletionreminderbody', 'autocompletewithequivalent');
+    'recompletionremindersubject', 'recompletionreminderbody', 'autocompletewithequivalent');
 
 // Create the settings form instance.
 $form = new local_recompletion_recompletion_form('recompletion.php?id='.$id, array('course' => $course));

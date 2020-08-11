@@ -90,7 +90,7 @@ class observer {
         global $DB;
 
         $data = $event->get_data();
-        $sql = "SELECT ue.id, ue.timestart FROM {user_enrolments} ue 
+        $sql = "SELECT ue.id, GREATEST(ue.timecreated, ue.timestart) as timestart FROM {user_enrolments} ue 
                 INNER JOIN {enrol} e ON e.id = ue.enrolid
                 INNER JOIN {course} c ON c.id = e.courseid
                 INNER JOIN {local_recompletion_config} rc2 ON rc2.course = c.id AND rc2.name = 'graceperiod' AND rc2.value > '0'

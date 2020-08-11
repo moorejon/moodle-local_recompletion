@@ -539,5 +539,20 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2020050602, 'local', 'recompletion');
     }
 
+    if ($oldversion < 2020050603) {
+
+        // Define field timestart to be added to local_recompletion_grace.
+        $table = new xmldb_table('local_recompletion_grace');
+        $field = new xmldb_field('timestart', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'courseid');
+
+        // Conditionally launch add field timestart.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2020050603, 'local', 'recompletion');
+    }
+
     return true;
 }

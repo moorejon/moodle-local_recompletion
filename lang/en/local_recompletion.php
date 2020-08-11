@@ -154,10 +154,12 @@ The following placeholders may be included in the message:
 $string['recompletionreminderdefaultbody'] = 'Hello {$a->fullname}, 
 
 You will need to recomplete the course <a href="{$a->link}">{$a->coursename}</a> soon.';
-$string['recompletiongraceperioddefaultsubject'] = 'Course {$a->coursename} grace period';
+$string['recompletiongraceperioddefaultsubject'] = 'AirTime Learning: You have been enrolled in {$a->coursename} course.';
 $string['recompletiongraceperioddefaultbody'] = 'Hello {$a->fullname}, 
 
-The grace period for the <a href="{$a->link}">{$a->coursename}</a> course is {$a->graceperiod} days, you will need to complete this course before the grace period expires or you will be out of compliance.';
+Because of your role, or based on the request of your leadership, you have been assigned the <a href="{$a->link}">{$a->coursename}</a> Course.
+
+Please complete this course by {$a->graceperiod}.';
 $string['eventrecompletionreminder'] = 'Course recompletion reminder';
 $string['errorgreaterperiod'] = 'It must be less than "Recompletion period"';
 $string['bulknotification'] = 'Enable bulk notification';

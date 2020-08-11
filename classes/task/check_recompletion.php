@@ -672,7 +672,7 @@ class check_recompletion extends \core\task\scheduled_task {
             $a->coursename = format_string($course->fullname, true, array('context' => $context));
             $a->fullname = fullname($userrecord);
             $a->link = course_get_url($course)->out();
-            $a->graceperiod = date('m/d/Y', ($userrecord->timestart + $userrecord->graceperiod));
+            $a->graceperiod = date('F j, Y', ($userrecord->timestart + $userrecord->graceperiod));
             $messagetext = get_string('recompletiongraceperioddefaultbody', 'local_recompletion', $a);
             $messagehtml = text_to_html($messagetext, null, false, true);
             $subject = get_string('recompletiongraceperioddefaultsubject', 'local_recompletion', $a);

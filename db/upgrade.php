@@ -506,6 +506,11 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         // Adding indexes to table local_recompletion_grace.
         $table->add_index('useridcourseid', XMLDB_INDEX_UNIQUE, ['userid', 'courseid']);
 
+        // Conditionally launch add field timestart.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
         // Conditionally launch create table for local_recompletion_grace.
         upgrade_plugin_savepoint(true, 2020050600, 'local', 'recompletion');
     }

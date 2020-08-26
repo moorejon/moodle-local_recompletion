@@ -652,7 +652,9 @@ class check_recompletion extends \core\task\scheduled_task {
                   FROM {user} u
                   INNER JOIN {local_recompletion_grace} lrg ON lrg.userid = u.id
                   INNER JOIN {local_recompletion_config} cfggraceperion ON cfggraceperion.course = lrg.courseid
-                         AND cfggraceperion.name = 'graceperiod'";
+                         AND cfggraceperion.name = 'graceperiod'
+                  LEFT JOIN {course_completions} cc ON cc.userid = u.id AND cc.course = lrg.courseid
+                  WHERE cc.id IS NULL OR cc.timecompleted IS NULL";
 
         $users = $DB->get_records_sql($sql);
 

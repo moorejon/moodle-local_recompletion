@@ -43,6 +43,22 @@ class observer {
         $userid = $event->relateduserid;
         $courseid = $event->courseid;
 
+        // Store completion data and course grade.
+        $completion  = new \stdClass();
+        $completion->userid = $userid;
+        $completion->courseid = $courseid;
+        $completion->timecompleted = $eventdata->timecompleted;
+        $courseitem = \grade_item::fetch_course_item($courseid);
+        if ($courseitem) {
+            $grade = new \grade_grade(array('itemid' => $courseitem->id, 'userid' => $userid));
+            $finalgrade = $grade->finalgrade;
+        } else {
+            $finalgrade = 0;
+        }
+        $completion->gradefinal = $finalgrade;
+        $completion->timesynced = 0;
+        $DB->insert_record('local_recompletion_com', $completion);
+
         // get all of its equivalent courses
         if (!$equivalents = helper::get_course_equivalencies($courseid, true)) {
             return true;

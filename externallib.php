@@ -1318,4 +1318,143 @@ class local_recompletion_external extends external_api {
             )
         );
     }
+
+    /**
+     * Returns description of get_completions() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function get_completions_parameters() {
+        return new external_function_parameters(
+                [
+                        'synced' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0),
+                        'limit' => new external_value(PARAM_INT, 'Limit', VALUE_DEFAULT, 1000)
+                ]
+        );
+    }
+
+    /**
+     * Get course recompletions
+     *
+     * @param int $synced Synced or not
+     * @param int $limit Number of record limit: Zero means no limit
+     * @throws moodle_exception
+     */
+    public static function get_completions($synced = 0, $limit = 1000) {
+        global $DB;
+
+        // Validate params
+        $params = self::validate_parameters(self::get_completions_parameters(),
+                ['synced' => $synced, 'limit' => $limit]);
+
+        $context = context_system::instance();
+        self::validate_context($context);
+
+        $rs = $DB->get_recordset('local_recompletion_com', ['synced' => $params['synced']], '', '*', 0, $params['limit']);
+
+        $return = ['completions' => []];
+
+        foreach ($rs as $rec) {
+            $return['completions'][] = (array) $rec;
+        }
+
+        $rs->close();
+
+        return $return;
+    }
+
+    /**
+     * Returns description of get_completions() result value.
+     *
+     * @return \external_value
+     */
+    public static function get_completions_returns() {
+        return new external_single_structure(
+                [
+                        'completions'   => new external_multiple_structure(
+                                new external_single_structure(
+                                        [
+                                                'id' => new external_value(PARAM_INT, 'Record ID'),
+                                                'userid' => new external_value(PARAM_TEXT, 'User Idnumber'),
+                                                'courseid' => new external_value(PARAM_TEXT, 'Course Idnumber'),
+                                                'gradefinal' => new external_value(PARAM_FLOAT, 'Course grade'),
+                                                'timecompleted' => new external_value(PARAM_INT, 'Course completion timestamp'),
+                                                'timesynced' => new external_value(PARAM_INT, 'Timestamp for sync'),
+                                                'synced' => new external_value(PARAM_INT, 'Is it synced')
+                                        ]
+                                )
+                        )
+                ]
+        );
+    }
+
+
+    /**
+     * Returns description of mark_out_of_compliants_parameters() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function mark_completions_synced_parameters() {
+        return new external_function_parameters(
+                [
+                        'ids' => new external_multiple_structure(
+                                new external_value(PARAM_INT, 'Record IDs'), 'An array of IDs', VALUE_DEFAULT, []
+                        )
+                ]
+        );
+    }
+
+    /**
+     * Get Course completions
+     *
+     * @param array $ids An array of record IDs
+     * @return bool
+     * @throws moodle_exception
+     */
+    public static function mark_completions_synced($ids) {
+        global $CFG, $DB;
+
+        require_once($CFG->dirroot . '/course/lib.php');
+
+        $params = self::validate_parameters(
+                self::mark_completions_synced_parameters(),
+                ['ids' => $ids]
+        );
+
+        if (!$params['ids']) {
+            return false;
+        }
+
+        list($insql, $params) = $DB->get_in_or_equal($params['ids'], SQL_PARAMS_NAMED, 'rec');
+
+        $sql = "SELECT o.*
+                  FROM {local_recompletion_com} o
+                  WHERE o.id {$insql}";
+
+        $rs = $DB->get_recordset_sql($sql, $params);
+        $synctime = time();
+
+        foreach ($rs as $data) {
+            $rec = new \stdClass();
+            $rec->id = $data->id;
+            $rec->synced = 1;
+            $rec->timesynced = $synctime;
+
+            if (!$DB->update_record('local_recompletion_com', $rec)) {
+                return false;
+            }
+        }
+        $rs->close();
+
+        return true;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     */
+    public static function mark_completions_synced_returns() {
+        return new external_value(PARAM_BOOL, 'True if the update was successful.');
+    }
 }

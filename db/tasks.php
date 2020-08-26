@@ -52,5 +52,14 @@ $tasks = array(
                 'day' => '*',
                 'dayofweek' => '*',
                 'month' => '*'
+        ),
+        array(
+                'classname' => 'local_recompletion\task\remove_old_synced',
+                'blocking' => 0,
+                'minute' => '0',
+                'hour' => '0',
+                'day' => '*',
+                'dayofweek' => '*',
+                'month' => '*'
         )
 );

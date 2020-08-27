@@ -648,14 +648,17 @@ class check_recompletion extends \core\task\scheduled_task {
     protected function grace_period_inform_users() {
         global $CFG, $DB;
 
-        $sql = "SELECT u.*, lrg.courseid, lrg.timestart, cfggraceperion.value AS graceperiod
+        $sql = "SELECT DISTINCT u.*, lrg.courseid, lrg.timestart, cfggraceperion.value AS graceperiod
                   FROM {user} u
                   INNER JOIN {local_recompletion_grace} lrg ON lrg.userid = u.id
                   INNER JOIN {local_recompletion_config} cfggraceperion ON cfggraceperion.course = lrg.courseid
                          AND cfggraceperion.name = 'graceperiod'
+                  INNER JOIN {enrol} e ON e.courseid = lrg.courseid
+                  INNER JOIN {user_enrolments} ue ON ue.enrolid = e.id AND ue.userid = lrg.userid
                   LEFT JOIN {course_completions} cc ON cc.userid = u.id AND cc.course = lrg.courseid
                   LEFT JOIN {local_recompletion_cc} lrcc ON lrcc.userid = u.id AND lrcc.course = lrg.courseid
-                  WHERE (cc.id IS NULL OR cc.timecompleted IS NULL) AND lrcc.id IS NULL";
+                  WHERE (cc.id IS NULL OR cc.timecompleted IS NULL) AND lrcc.id IS NULL
+                  AND e.enrol NOT IN ('auto', 'self')";
 
         $users = $DB->get_records_sql($sql);
 

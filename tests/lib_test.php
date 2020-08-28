@@ -490,6 +490,19 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->assertCount(0, $completions);
         $modulecompletions = $DB->get_records('course_modules_completion');
         $this->assertCount(0, $modulecompletions);
+
+        // Verify no new messages are sent on task re-execution and course isn't reset again
+        $this->complete_module($course, $user);
+        $task = new local_recompletion\task\check_recompletion();
+        $task->execute();
+
+        // Notification test.
+        $nummessages = $sink->count();
+        $this->assertEquals(1, $nummessages);
+
+        // Completions test
+        $modulecompletions = $DB->get_records('course_modules_completion');
+        $this->assertCount(1, $modulecompletions);
     }
 
     /**

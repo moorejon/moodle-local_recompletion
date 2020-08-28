@@ -392,6 +392,107 @@ class local_recompletion_lib_testcase extends advanced_testcase {
     }
 
     /**
+     * A completed course with one or more completed equivalents that properly triggers recompletion
+     * notifications and expiration.
+     */
+    public function test_recomplete_using_equivalents() {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+        $equivalentcourse1 = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+
+        $this->create_course_completion($course);
+        $this->create_course_completion($equivalentcourse1);
+
+        $this->complete_module($course, $user);
+        $this->complete_course($equivalentcourse1, $user);
+        $completions = $DB->get_records('course_completions');
+        $this->assertCount(1, $completions);
+        $modulecompletions = $DB->get_records('course_modules_completion');
+        $this->assertCount(2, $modulecompletions);
+
+
+        $corecompletion1 = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $equivalentcourse1->id]);
+        $timecompleted1 = time() - (5 * DAYSECS + 2 * HOURSECS);
+        $corecompletion1->timecompleted = $timecompleted1;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
+
+        $settings = array(
+                'enable' => 1,
+                'recompletionduration' => 5, // 5 days.
+                'deletegradedata' => 1,
+                'quizdata' => 1,
+                'scormdata' => 0,
+                'archivecompletiondata' => 1,
+                'archivequizdata' => 1,
+                'archivescormdata' => 1,
+                'recompletionemailenable' => 1,
+                'recompletionemailsubject' => '',
+                'recompletionemailbody' => '',
+                'assigndata' => 1,
+                'customcertdata' => 1,
+                'archivecustomcertdata' => 1,
+                'bulknotification' => 0,
+                'notificationstart' => 1, // 1 day.
+                'frequency' => 1, // 1 day
+                'recompletionremindersubject' => '',
+                'recompletionreminderbody' => '',
+                'recompletewithequivalent' => 1
+        );
+        \local_recompletion_external::update_course_settings($course->id, $settings);
+
+        $settings = array(
+                'enable' => 1,
+                'recompletionduration' => 10, // 10 days.
+                'deletegradedata' => 1,
+                'quizdata' => 1,
+                'scormdata' => 0,
+                'archivecompletiondata' => 1,
+                'archivequizdata' => 1,
+                'archivescormdata' => 1,
+                'recompletionemailenable' => 1,
+                'recompletionemailsubject' => '',
+                'recompletionemailbody' => '',
+                'assigndata' => 1,
+                'customcertdata' => 1,
+                'archivecustomcertdata' => 1,
+                'bulknotification' => 0,
+                'notificationstart' => 1, // 1 day.
+                'frequency' => 1, // 1 day
+                'recompletionremindersubject' => '',
+                'recompletionreminderbody' => ''
+        );
+
+        \local_recompletion_external::update_course_settings($equivalentcourse1->id, $settings);
+
+        \local_recompletion_external::create_course_equivalent($course->id, $equivalentcourse1->id, false);
+
+        $sink = $this->redirectEmails();
+        $task = new local_recompletion\task\check_recompletion();
+        $task->execute();
+
+        // Notification test.
+        $messages = $sink->get_messages();
+        $this->assertCount(1, $messages);
+        $stringobj = new stdClass();
+        $stringobj->coursename = $course->fullname;
+        $defaultsubject = get_string('recompletionemaildefaultsubject', 'local_recompletion', $stringobj);
+        $this->assertEquals($defaultsubject, $messages[0]->subject);
+
+        // Is data reset for course and its equivalent?
+        $completions = $DB->get_records('course_completions');
+        $this->assertCount(0, $completions);
+        $modulecompletions = $DB->get_records('course_modules_completion');
+        $this->assertCount(0, $modulecompletions);
+    }
+
+    /**
      * Test due date functionality
      */
     public function test_due_date_with_multiple_equivalents() {
@@ -632,7 +733,7 @@ class local_recompletion_lib_testcase extends advanced_testcase {
      * @param  stdClass $user The user object
      * @param  bool $modulecompletion If true will complete the activity module completion thing.
      */
-    public function complete_course($course, $user, $modulecompletion = true, $time=null) {
+    public function complete_course($course, $user, $modulecompletion = true) {
         global $DB;
         $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
         $completion = new \completion_info($course);
@@ -643,7 +744,13 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         }
         if ($modulecompletion) {
             // Set activity as complete.
-            $completion->update_state($this->cm[$course->id], COMPLETION_COMPLETE, $user->id);
+            $this->complete_module($course, $user);
         }
+    }
+
+    public function complete_module($course, $user) {
+        // Set activity as complete.
+        $completion = new \completion_info($course);
+        $completion->update_state($this->cm[$course->id], COMPLETION_COMPLETE, $user->id);
     }
 }

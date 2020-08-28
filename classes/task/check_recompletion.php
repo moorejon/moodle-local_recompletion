@@ -67,6 +67,53 @@ class check_recompletion extends \core\task\scheduled_task {
             return;
         }
 
+        // Checking incomplete courses that will recomplete with equivalents
+        $sql = "SELECT ue.id, ue.userid, e.courseid, lrr.id as resetid, lrr.timereset
+            FROM {user_enrolments} ue
+            JOIN {enrol} e ON e.id = ue.enrolid
+            JOIN {course} c ON c.id = e.courseid
+            JOIN {local_recompletion_config} r ON r.course = e.courseid AND r.name = 'enable' AND r.value = '1'
+            JOIN {local_recompletion_config} r2 ON r2.course = e.courseid AND r2.name = 'recompletionduration'
+            JOIN {local_recompletion_config} r3 ON r3.course = e.courseid AND r3.name = 'recompletewithequivalent' AND r.value = '1'
+            LEFT JOIN {course_completions} cc ON cc.userid = ue.userid AND cc.course = e.courseid
+            LEFT JOIN {local_recompletion_reset} lrr ON lrr.userid = ue.userid AND lrr.courseid = e.courseid
+            WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted IS NULL
+            AND ".$DB->sql_cast_char2int('r2.value')." > 0";
+        $users = $DB->get_records_sql($sql);
+        $time = time();
+        foreach ($users as $user) {
+            // Get course data.
+            $course = $this->build_course($user->courseid);
+            // Get recompletion config.
+            $config = $this->build_config($user->courseid);
+
+            // Reset based on equivalent courses if configured
+            $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id);
+            $lastcompletion =
+                    \local_recompletion\helper::get_last_equivalency_completion($user->userid, $user->courseid, $equivalents);
+            $timetorecomplete = \local_recompletion\helper::recomplete_time($lastcompletion->timecompleted, $config);
+            if ($timetorecomplete < $time && $user->timereset < $timetorecomplete) {
+                $this->reset_user($user->userid, $course, $config);
+                foreach ($equivalents as $equivalent) {
+                    $eqvcourse = $this->build_course($equivalent->courseid);
+                    $equivconfig = $this->build_config($equivalent->courseid);
+                    $this->reset_user($user->userid, $eqvcourse, $equivconfig);
+                }
+                $resetrecord = new \stdClass();
+                $resetrecord->userid = $user->userid;
+                $resetrecord->courseid = $user->courseid;
+                $resetrecord->timereset = $time;
+
+                if ($user->resetid) {
+                    $resetrecord->id = $user->resetid;
+                    $DB->update_record('local_recompletion_reset', $resetrecord);
+                } else {
+                    $DB->insert_record('local_recompletion_reset', $resetrecord);
+                }
+            }
+        }
+
+        // Checking normal recompletion of completed courses
         $sql = "SELECT cc.id, cc.userid, cc.course
             FROM {course_completions} cc
             JOIN {local_recompletion_config} r ON r.course = cc.course AND r.name = 'enable' AND r.value = '1'
@@ -76,24 +123,13 @@ class check_recompletion extends \core\task\scheduled_task {
             WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND
             (cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?";
         $users = $DB->get_records_sql($sql, array(time()));
-        $courses = array();
+
         foreach ($users as $user) {
             // Get course data.
             $course = $this->build_course($user->course);
-
             // Get recompletion config.
             $config = $this->build_config($user->course);
             $this->reset_user($user->userid, $course, $config);
-            // Reset equivalent courses if needed
-            $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id);
-            foreach ($equivalents as $equivalent) {
-                $eqvcourse = $this->build_course($equivalent->courseid);
-                $equivconfig = $this->build_config($equivalent->courseid);
-                if ($equivconfig->recompletewithequivalent) {
-                    $this->reset_user($user->userid, $eqvcourse, $equivconfig);
-                    $this->update_equivalents_completed_time($user->userid, $course->id, $eqvcourse->id);
-                }
-            }
         }
 
         $this->grace_period_inform_users();
@@ -137,28 +173,6 @@ class check_recompletion extends \core\task\scheduled_task {
             $config = $this->configs[$courseid];
         }
         return $config;
-    }
-
-    /**
-     * Set timecompleted in local_recompletion_cc for equivalent course
-     * @param $userid
-     * @param $courseid
-     * @param $equivcourseid
-     * @throws \dml_exception
-     */
-    protected function update_equivalents_completed_time($userid, $courseid, $equivcourseid) {
-        global $DB;
-
-        $timecompleted = $DB->get_field('local_recompletion_cc', 'timecompleted', [
-                'userid' => $userid,
-                'course' => $courseid
-        ]);
-        if ($timecompleted) {
-            $DB->set_field('local_recompletion_cc', 'timecompleted', $timecompleted, [
-                    'userid' => $userid,
-                    'course' => $equivcourseid
-            ]);
-        }
     }
 
     /**

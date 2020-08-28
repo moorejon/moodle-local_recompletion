@@ -158,4 +158,8 @@ class helper {
 
         return $timestart;
     }
+
+    public static function recomplete_time($timecompleted, $config) {
+        return ($timecompleted + $config->recompletionduration - $config->notificationstart);
+    }
 }

@@ -217,7 +217,7 @@ class local_recompletion_external extends external_api {
      * Update the course settings
      *
      * @param int $courseid the course id
-     * @param stdClass $settings The list of settings (currently only pushratingstouserplans).
+     * @param array $settings The list of settings (currently only pushratingstouserplans).
      * @throws moodle_exception
      */
     public static function update_course_settings($courseid, $settings) {

@@ -692,6 +692,34 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->assertEquals($duedate, $calculateddue);
     }
 
+    public function test_course_completion_webservice () {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['idnumber' => 'COURSE12345', 'enablecompletion' => 1]);
+        $user = $this->getDataGenerator()->create_user(['idnumber' => 'USER12345']);
+
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $this->create_course_completion($course);
+        $this->complete_course($course, $user);
+        $grade = 50;
+        $this->create_grade($course, $user, $grade);
+
+        $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $course->id]);
+        $timecompleted = time() - (5 * DAYSECS);
+        $corecompletion->timecompleted = $timecompleted;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion]);
+        \core\event\course_completed::create_from_completion($corecompletion)->trigger();
+
+        $result = \local_recompletion_external::get_completions();
+        $this->assertCount(1, $result['completions']);
+        $this->assertequals($user->idnumber, $result['completions'][0]['userid']);
+        $this->assertequals($course->idnumber, $result['completions'][0]['courseid']);
+        $this->assertequals($grade, $result['completions'][0]['gradefinal']);
+    }
+
     /**
      * Create completion information.
      */
@@ -765,5 +793,22 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         // Set activity as complete.
         $completion = new \completion_info($course);
         $completion->update_state($this->cm[$course->id], COMPLETION_COMPLETE, $user->id);
+    }
+
+    public function create_grade($course, $user, $finalgrade = 50) {
+        global $DB;
+
+        $courseitem = \grade_item::fetch_course_item($course->id);
+
+        // Create a grade to go with the grade item.
+        $grade = new stdClass();
+        $grade->itemid = $courseitem->id;
+        $grade->userid = $user->id;
+        $grade->finalgrade = $finalgrade;
+        $grade->rawgrademax = $courseitem->grademax;
+        $grade->rawgrademin = $courseitem->grademin;
+        $grade->timecreated = time();
+        $grade->timemodified = time();
+        $DB->insert_record('grade_grades', $grade);
     }
 }

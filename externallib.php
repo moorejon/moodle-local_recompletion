@@ -1336,7 +1336,7 @@ class local_recompletion_external extends external_api {
     }
 
     /**
-     * Get course recompletions
+     * Get course rompletions
      *
      * @param int $synced Synced or not
      * @param int $limit Number of record limit: Zero means no limit

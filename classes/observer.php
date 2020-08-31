@@ -40,39 +40,41 @@ class observer {
         global $DB, $CFG;
 
         $eventdata = $event->get_record_snapshot('course_completions', $event->objectid);
-        $userid = $event->relateduserid;
-        $courseid = $event->courseid;
+        $user = $DB->get_record('user', ['id' => $event->relateduserid],'*', MUST_EXIST);
+        $course = $DB->get_record('course', ['id' => $event->courseid],'*', MUST_EXIST);
 
         // Store completion data and course grade.
-        $completion  = new \stdClass();
-        $completion->userid = $userid;
-        $completion->courseid = $courseid;
-        $completion->timecompleted = $eventdata->timecompleted;
-        $courseitem = \grade_item::fetch_course_item($courseid);
-        if ($courseitem) {
-            $grade = new \grade_grade(array('itemid' => $courseitem->id, 'userid' => $userid));
-            $finalgrade = $grade->finalgrade;
-        } else {
-            $finalgrade = 0;
+        if ($user && $user->idnumber && $course && $course->idnumber) {
+            $completion = new \stdClass();
+            $completion->userid = $user->idnumber;
+            $completion->courseid = $course->idnumber;
+            $completion->timecompleted = $eventdata->timecompleted;
+            $courseitem = \grade_item::fetch_course_item($course->id);
+            if ($courseitem) {
+                $grade = new \grade_grade(array('itemid' => $courseitem->id, 'userid' => $user->id));
+                $finalgrade = $grade->finalgrade;
+            } else {
+                $finalgrade = null;
+            }
+            $completion->gradefinal = $finalgrade;
+            $completion->timesynced = time();
+            $DB->insert_record('local_recompletion_com', $completion);
         }
-        $completion->gradefinal = $finalgrade;
-        $completion->timesynced = 0;
-        $DB->insert_record('local_recompletion_com', $completion);
 
         // get all of its equivalent courses
-        if (!$equivalents = helper::get_course_equivalencies($courseid, true)) {
+        if (!$equivalents = helper::get_course_equivalencies($course->id, true)) {
             return true;
         }
 
-        if (isset($equivalents[$courseid])) {
-            unset($equivalents[$courseid]);
+        if (isset($equivalents[$course->id])) {
+            unset($equivalents[$course->id]);
         }
 
         foreach ($equivalents as $equivalent) {
             if (!$autocompletewithequivalent = $DB->get_field('local_recompletion_config', 'value', ['course' => $equivalent->courseid, 'name' => 'autocompletewithequivalent'])) {
                 continue;
             }
-            if ($completion = $DB->get_record('course_completions', ['userid' => $userid, 'course' => $equivalent->courseid])) {
+            if ($completion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $equivalent->courseid])) {
                 // Update.
                 $data = new \stdClass();
                 $data->id = $eventdata->id;
@@ -81,7 +83,7 @@ class observer {
             } else {
                 // Insert.
                 $data = new \stdClass();
-                $data->userid = $userid;
+                $data->userid = $user->id;
                 $data->course = $equivalent->courseid;
                 $data->timecompleted = $eventdata->timecompleted;
                 $data->id = $DB->insert_record('course_completions', $data);

@@ -402,6 +402,21 @@ class local_recompletion_external extends external_api {
             if (!$recompletion = $DB->get_record('local_recompletion_cc', array('id' => $data['id']))) {
                 continue;
             }
+            // Trigger externalapi_called event.
+            $context = \context_course::instance($recompletion->course);
+            $event = \local_recompletion\event\externalapi_called::create(
+                    array(
+                            'objectid' => $recompletion->course,
+                            'courseid' => $recompletion->course,
+                            'relateduserid' => $recompletion->userid,
+                            'context' => $context,
+                            'other' => [
+                                    'apicall' => 'update_completion',
+                                    'values' => $data
+                            ]
+                    )
+            );
+            $event->trigger();
 
             $context = context_course::instance($recompletion->course);
             self::validate_context($context);
@@ -455,6 +470,22 @@ class local_recompletion_external extends external_api {
         if (!$recompletion = $DB->get_record('local_recompletion_cc', array('id' => $params['completionid']))) {
             throw new invalid_parameter_exception("Completion with id = $completionid does not exist");
         }
+
+        // Trigger externalapi_called event.
+        $context = \context_course::instance($recompletion->course);
+        $event = \local_recompletion\event\externalapi_called::create(
+                array(
+                        'objectid' => $recompletion->course,
+                        'courseid' => $recompletion->course,
+                        'relateduserid' => $recompletion->userid,
+                        'context' => $context,
+                        'other' => [
+                                'apicall' => 'delete_completion',
+                                'values' => $params
+                        ]
+                )
+        );
+        $event->trigger();
 
         $context = context_course::instance($recompletion->course);
         self::validate_context($context);
@@ -826,6 +857,22 @@ class local_recompletion_external extends external_api {
                 continue;
             }
 
+            // Trigger externalapi_called event.
+            $context = \context_course::instance($corecompletion->course);
+            $event = \local_recompletion\event\externalapi_called::create(
+                    array(
+                            'objectid' => $corecompletion->course,
+                            'courseid' => $corecompletion->course,
+                            'relateduserid' => $corecompletion->userid,
+                            'context' => $context,
+                            'other' => [
+                                    'apicall' => 'update_core_completion',
+                                    'values' => $data
+                            ]
+                    )
+            );
+            $event->trigger();
+
             $context = context_course::instance($corecompletion->course);
             self::validate_context($context);
 
@@ -878,6 +925,22 @@ class local_recompletion_external extends external_api {
         if (!$corecompletion = $DB->get_record('course_completions', array('id' => $params['completionid']))) {
             throw new invalid_parameter_exception("Completion with id = $completionid does not exist");
         }
+
+        // Trigger externalapi_called event.
+        $context = \context_course::instance($corecompletion->course);
+        $event = \local_recompletion\event\externalapi_called::create(
+                array(
+                        'objectid' => $corecompletion->course,
+                        'courseid' => $corecompletion->course,
+                        'relateduserid' => $corecompletion->userid,
+                        'context' => $context,
+                        'other' => [
+                                'apicall' => 'delete_core_completion',
+                                'values' => $corecompletion
+                        ]
+                )
+        );
+        $event->trigger();
 
         $context = context_course::instance($corecompletion->course);
         self::validate_context($context);

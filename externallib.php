@@ -205,7 +205,8 @@ class local_recompletion_external extends external_api {
                         'recompletionremindersubject' => new external_value(PARAM_RAW, 'Recompletion reminder subject', VALUE_OPTIONAL),
                         'recompletionreminderbody' => new external_value(PARAM_RAW, 'Recompletion reminder message body', VALUE_OPTIONAL),
                         'autocompletewithequivalent' => new external_value(PARAM_INT, 'Auto complete with equivalent courses', VALUE_OPTIONAL),
-                        'graceperiod' => new external_value(PARAM_INT, 'Grace period in days', VALUE_OPTIONAL)
+                        'graceperiod' => new external_value(PARAM_INT, 'Grace period in days', VALUE_OPTIONAL),
+                        'recompletewithequivalent' => new external_value(PARAM_INT, 'Auto complete with equivalent courses', VALUE_OPTIONAL)
                     )
                 )
             )
@@ -216,7 +217,7 @@ class local_recompletion_external extends external_api {
      * Update the course settings
      *
      * @param int $courseid the course id
-     * @param stdClass $settings The list of settings (currently only pushratingstouserplans).
+     * @param array $settings The list of settings (currently only pushratingstouserplans).
      * @throws moodle_exception
      */
     public static function update_course_settings($courseid, $settings) {
@@ -229,7 +230,7 @@ class local_recompletion_external extends external_api {
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
             'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-            'recompletionreminderbody', 'autocompletewithequivalent', 'graceperiod');
+            'recompletionreminderbody', 'autocompletewithequivalent', 'graceperiod', 'recompletewithequivalent');
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
@@ -536,7 +537,7 @@ class local_recompletion_external extends external_api {
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
             'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-            'recompletionreminderbody', 'autocompletewithequivalent');
+            'recompletionreminderbody', 'autocompletewithequivalent', 'recompletewithequivalent');
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
@@ -584,6 +585,7 @@ class local_recompletion_external extends external_api {
                 'recompletionremindersubject' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
                 'recompletionreminderbody' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
                 'autocompletewithequivalent' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'recompletewithequivalent' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
             )
         );
     }

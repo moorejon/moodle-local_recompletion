@@ -76,7 +76,10 @@ $PAGE->requires->js_amd_inline("
             $('#id_frequency_timeunit option[value=3600]').remove();
             $('#id_graceperiod_timeunit option[value=1]').remove();
             $('#id_graceperiod_timeunit option[value=60]').remove();
-            $('#id_graceperiod_timeunit option[value=3600]').remove();              
+            $('#id_graceperiod_timeunit option[value=3600]').remove();
+            $('#id_earlyrecompletionduration_timeunit option[value=1]').remove();
+            $('#id_earlyrecompletionduration_timeunit option[value=60]').remove();
+            $('#id_earlyrecompletionduration_timeunit option[value=3600]').remove();            
         });");
 
 // This seems a bit messy - would be nice to tidy this up a bit.

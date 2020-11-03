@@ -86,7 +86,8 @@ $idmap = $DB->get_records_menu('local_recompletion_config', array('course' => $c
 $setnames = array('graceperiod', 'enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
     'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
     'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency',
-    'recompletionremindersubject', 'recompletionreminderbody', 'autocompletewithequivalent', 'recompletewithequivalent');
+    'recompletionremindersubject', 'recompletionreminderbody', 'autocompletewithequivalent', 'recompletewithequivalent',
+    'earlyrecompletionduration');
 
 // Create the settings form instance.
 $form = new local_recompletion_recompletion_form('recompletion.php?id='.$id, array('course' => $course));

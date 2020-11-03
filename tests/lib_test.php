@@ -721,6 +721,69 @@ class local_recompletion_lib_testcase extends advanced_testcase {
     }
 
     /**
+     * Test early recompletion duration functionality
+     */
+    public function test_early_recompletion_duration() {
+        global $DB, $CFG;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+
+        $user = $this->getDataGenerator()->create_user();
+
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+
+        $this->create_course_completion($course);
+
+        $this->complete_course($course, $user);
+        $corecompletion1 = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $course->id]);
+        $timecompleted1 = time() - (5 * DAYSECS + 1);
+        $corecompletion1->timecompleted = $timecompleted1;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
+
+        $settings = array(
+                'enable' => 1,
+                'recompletionduration' => 10,
+                'deletegradedata' => 1,
+                'quizdata' => 1,
+                'scormdata' => 0,
+                'archivecompletiondata' => 1,
+                'archivequizdata' => 1,
+                'archivescormdata' => 1,
+                'recompletionemailenable' => 1,
+                'recompletionemailsubject' => '',
+                'recompletionemailbody' => '',
+                'assigndata' => 1,
+                'customcertdata' => 1,
+                'archivecustomcertdata' => 1,
+                'bulknotification' => 0,
+                'notificationstart' => 1, // 1 day.
+                'frequency' => 1, // 1 day
+                'recompletionremindersubject' => '',
+                'recompletionreminderbody' => '',
+                'graceperiod' => 3,
+                'earlyrecompletionduration' => 5
+        );
+        \local_recompletion_external::update_course_settings($course->id, $settings);
+
+        $sink = $this->redirectEmails();
+        $task = new local_recompletion\task\check_recompletion();
+        $task->execute();
+
+        // Notification test.
+        $messages = $sink->get_messages();
+        $this->assertCount(0, $messages);
+
+        // Is data reset for course?
+        $completions = $DB->get_records('course_completions');
+        $this->assertCount(0, $completions);
+        $modulecompletions = $DB->get_records('course_modules_completion');
+        $this->assertCount(0, $modulecompletions);
+    }
+
+    /**
      * Create completion information.
      */
     public function create_course_completion($course) {

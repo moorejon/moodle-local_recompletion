@@ -206,6 +206,7 @@ class local_recompletion_external extends external_api {
                         'recompletionreminderbody' => new external_value(PARAM_RAW, 'Recompletion reminder message body', VALUE_OPTIONAL),
                         'autocompletewithequivalent' => new external_value(PARAM_INT, 'Auto complete with equivalent courses', VALUE_OPTIONAL),
                         'graceperiod' => new external_value(PARAM_INT, 'Grace period in days', VALUE_OPTIONAL),
+                        'earlyrecompletionduration' => new external_value(PARAM_INT, 'Period for early recompletion reset', VALUE_OPTIONAL),
                         'recompletewithequivalent' => new external_value(PARAM_INT, 'Auto complete with equivalent courses', VALUE_OPTIONAL)
                     )
                 )
@@ -230,7 +231,7 @@ class local_recompletion_external extends external_api {
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
             'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-            'recompletionreminderbody', 'autocompletewithequivalent', 'graceperiod', 'recompletewithequivalent');
+            'recompletionreminderbody', 'autocompletewithequivalent', 'graceperiod', 'recompletewithequivalent', 'earlyrecompletionduration');
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
@@ -242,7 +243,7 @@ class local_recompletion_external extends external_api {
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $params['courseid']), '', 'name, value');
         $idmap = $DB->get_records_menu('local_recompletion_config', array('course' => $params['courseid']), '', 'name, id');
 
-        $daybasedvariables = array('recompletionduration', 'notificationstart', 'frequency', 'graceperiod');
+        $daybasedvariables = array('recompletionduration', 'notificationstart', 'frequency', 'graceperiod', 'earlyrecompletionduration');
         foreach ($setnames as $name) {
             if (isset($params['settings'][$name])) {
                 $value = $params['settings'][$name];
@@ -402,6 +403,21 @@ class local_recompletion_external extends external_api {
             if (!$recompletion = $DB->get_record('local_recompletion_cc', array('id' => $data['id']))) {
                 continue;
             }
+            // Trigger externalapi_called event.
+            $context = \context_course::instance($recompletion->course);
+            $event = \local_recompletion\event\externalapi_called::create(
+                    array(
+                            'objectid' => $recompletion->course,
+                            'courseid' => $recompletion->course,
+                            'relateduserid' => $recompletion->userid,
+                            'context' => $context,
+                            'other' => [
+                                    'apicall' => 'update_completion',
+                                    'values' => $data
+                            ]
+                    )
+            );
+            $event->trigger();
 
             $context = context_course::instance($recompletion->course);
             self::validate_context($context);
@@ -456,6 +472,22 @@ class local_recompletion_external extends external_api {
             throw new invalid_parameter_exception("Completion with id = $completionid does not exist");
         }
 
+        // Trigger externalapi_called event.
+        $context = \context_course::instance($recompletion->course);
+        $event = \local_recompletion\event\externalapi_called::create(
+                array(
+                        'objectid' => $recompletion->course,
+                        'courseid' => $recompletion->course,
+                        'relateduserid' => $recompletion->userid,
+                        'context' => $context,
+                        'other' => [
+                                'apicall' => 'delete_completion',
+                                'values' => $params
+                        ]
+                )
+        );
+        $event->trigger();
+
         $context = context_course::instance($recompletion->course);
         self::validate_context($context);
         require_capability('local/recompletion:manage', $context);
@@ -506,7 +538,7 @@ class local_recompletion_external extends external_api {
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
             'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-            'recompletionreminderbody', 'autocompletewithequivalent', 'recompletewithequivalent');
+            'recompletionreminderbody', 'autocompletewithequivalent', 'recompletewithequivalent', 'earlyrecompletionduration');
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
@@ -555,6 +587,8 @@ class local_recompletion_external extends external_api {
                 'recompletionreminderbody' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
                 'autocompletewithequivalent' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
                 'recompletewithequivalent' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'graceperiod' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'earlyrecompletionduration' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
             )
         );
     }
@@ -826,6 +860,22 @@ class local_recompletion_external extends external_api {
                 continue;
             }
 
+            // Trigger externalapi_called event.
+            $context = \context_course::instance($corecompletion->course);
+            $event = \local_recompletion\event\externalapi_called::create(
+                    array(
+                            'objectid' => $corecompletion->course,
+                            'courseid' => $corecompletion->course,
+                            'relateduserid' => $corecompletion->userid,
+                            'context' => $context,
+                            'other' => [
+                                    'apicall' => 'update_core_completion',
+                                    'values' => $data
+                            ]
+                    )
+            );
+            $event->trigger();
+
             $context = context_course::instance($corecompletion->course);
             self::validate_context($context);
 
@@ -878,6 +928,22 @@ class local_recompletion_external extends external_api {
         if (!$corecompletion = $DB->get_record('course_completions', array('id' => $params['completionid']))) {
             throw new invalid_parameter_exception("Completion with id = $completionid does not exist");
         }
+
+        // Trigger externalapi_called event.
+        $context = \context_course::instance($corecompletion->course);
+        $event = \local_recompletion\event\externalapi_called::create(
+                array(
+                        'objectid' => $corecompletion->course,
+                        'courseid' => $corecompletion->course,
+                        'relateduserid' => $corecompletion->userid,
+                        'context' => $context,
+                        'other' => [
+                                'apicall' => 'delete_core_completion',
+                                'values' => $corecompletion
+                        ]
+                )
+        );
+        $event->trigger();
 
         $context = context_course::instance($corecompletion->course);
         self::validate_context($context);

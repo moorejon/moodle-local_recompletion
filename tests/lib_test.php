@@ -692,6 +692,148 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->assertEquals($duedate, $calculateddue);
     }
 
+    public function test_course_completion_webservice () {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['idnumber' => 'COURSE12345', 'enablecompletion' => 1]);
+        $user = $this->getDataGenerator()->create_user(['idnumber' => 'USER12345']);
+
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $this->create_course_completion($course);
+        $this->complete_course($course, $user);
+        $grade = 50;
+        $this->create_grade($course, $user, $grade);
+
+        $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $course->id]);
+        $timecompleted = time() - (5 * DAYSECS);
+        $corecompletion->timecompleted = $timecompleted;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion]);
+        \core\event\course_completed::create_from_completion($corecompletion)->trigger();
+
+        $result = \local_recompletion_external::get_completions();
+        $this->assertCount(1, $result['completions']);
+        $this->assertequals($user->idnumber, $result['completions'][0]['userid']);
+        $this->assertequals($course->idnumber, $result['completions'][0]['courseid']);
+        $this->assertequals($grade, $result['completions'][0]['gradefinal']);
+    }
+
+    /**
+     * Test early recompletion duration functionality
+     */
+    public function test_early_recompletion_duration() {
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+
+        $user = $this->getDataGenerator()->create_user();
+
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+
+        $this->create_course_completion($course);
+
+        $this->complete_course($course, $user);
+        $corecompletion1 = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $course->id]);
+        $timecompleted1 = time() - (5 * DAYSECS + 1);
+        $corecompletion1->timecompleted = $timecompleted1;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
+
+        $settings = array(
+                'enable' => 1,
+                'recompletionduration' => 10,
+                'deletegradedata' => 1,
+                'quizdata' => 1,
+                'scormdata' => 0,
+                'archivecompletiondata' => 1,
+                'archivequizdata' => 1,
+                'archivescormdata' => 1,
+                'recompletionemailenable' => 1,
+                'recompletionemailsubject' => '',
+                'recompletionemailbody' => '',
+                'assigndata' => 1,
+                'customcertdata' => 1,
+                'archivecustomcertdata' => 1,
+                'bulknotification' => 0,
+                'notificationstart' => 1, // 1 day.
+                'frequency' => 1, // 1 day
+                'recompletionremindersubject' => '',
+                'recompletionreminderbody' => '',
+                'graceperiod' => 3,
+                'earlyrecompletionduration' => 5
+        );
+        \local_recompletion_external::update_course_settings($course->id, $settings);
+
+        $sink = $this->redirectEmails();
+        $task = new local_recompletion\task\check_recompletion();
+        $task->execute();
+
+        // Notification test.
+        $messages = $sink->get_messages();
+        $this->assertCount(0, $messages);
+
+        // Is data reset for course?
+        $completions = $DB->get_records('course_completions');
+        $this->assertCount(0, $completions);
+        $modulecompletions = $DB->get_records('course_modules_completion');
+        $this->assertCount(0, $modulecompletions);
+    }
+
+    public function test_synced_record_cleanup() {
+        global $DB, $CFG;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+        $user = $this->getDataGenerator()->create_user();
+
+        $completionrecord = new stdClass();
+        $completionrecord->userid = $user->id;
+        $completionrecord->courseid = $course->id;
+        $thirtyonedaysago = time() - 60 * 60 * 24 * 31;
+        $completionrecord->timecompleted = $thirtyonedaysago;
+        $completionrecord->timesynced = $thirtyonedaysago;
+        $completionrecord->synced = 0;
+        $DB->insert_record('local_recompletion_com', $completionrecord);
+
+        $completions = \local_recompletion_external::get_completions();
+        $this->assertCount(1, $completions);
+
+        $outcomprecord = new stdClass();
+        $outcomprecord->userid = $user->id;
+        $outcomprecord->courseid = $course->id;
+        $outcomprecord->timesynced = $thirtyonedaysago;
+        $outcomprecord->synced = 0;
+        $DB->insert_record('local_recompletion_outcomp', $outcomprecord);
+
+        $outofcomps = \local_recompletion_external::get_out_of_compliants();
+        $this->assertCount(1, $outofcomps);
+
+        $task = new \local_recompletion\task\remove_old_synced();
+        $task->execute();
+
+        $completions = \local_recompletion_external::get_completions();
+        $this->assertCount(1, $completions['completions']);
+        $outofcomps = \local_recompletion_external::get_out_of_compliants();
+        $this->assertCount(1, $outofcomps['outofcompliants']);
+
+        $ids = array('ids' => $completions['completions'][0]['id']);
+        \local_recompletion_external::mark_completions_synced($ids);
+
+        $ids = array('ids' => $outofcomps['outofcompliants'][0]['id']);
+        \local_recompletion_external::mark_out_of_compliants($ids);
+
+        $task = new \local_recompletion\task\remove_old_synced();
+        $task->execute();
+
+        $completions = \local_recompletion_external::get_completions();
+        $this->assertEmpty($completions['completions']);
+        $outofcomps = \local_recompletion_external::get_out_of_compliants();
+        $this->assertEmpty($outofcomps['outofcompliants']);
+    }
+
     /**
      * Create completion information.
      */
@@ -765,5 +907,22 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         // Set activity as complete.
         $completion = new \completion_info($course);
         $completion->update_state($this->cm[$course->id], COMPLETION_COMPLETE, $user->id);
+    }
+
+    public function create_grade($course, $user, $finalgrade = 50) {
+        global $DB;
+
+        $courseitem = \grade_item::fetch_course_item($course->id);
+
+        // Create a grade to go with the grade item.
+        $grade = new stdClass();
+        $grade->itemid = $courseitem->id;
+        $grade->userid = $user->id;
+        $grade->finalgrade = $finalgrade;
+        $grade->rawgrademax = $courseitem->grademax;
+        $grade->rawgrademin = $courseitem->grademin;
+        $grade->timecreated = time();
+        $grade->timemodified = time();
+        $DB->insert_record('grade_grades', $grade);
     }
 }

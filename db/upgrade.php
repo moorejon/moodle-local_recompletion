@@ -506,12 +506,12 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         // Adding indexes to table local_recompletion_grace.
         $table->add_index('useridcourseid', XMLDB_INDEX_UNIQUE, ['userid', 'courseid']);
 
-        // Conditionally launch create table for local_recompletion_grace.
-        if (!$dbman->table_exists($table)) {
-            $dbman->create_table($table);
+        // Conditionally launch add field timestart.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
         }
 
-        // Recompletion savepoint reached.
+        // Conditionally launch create table for local_recompletion_grace.
         upgrade_plugin_savepoint(true, 2020050600, 'local', 'recompletion');
     }
 
@@ -554,6 +554,36 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2020050603, 'local', 'recompletion');
     }
 
+    if ($oldversion < 2020071700) {
+
+        // Define table local_recompletion_com to be created.
+        $table = new xmldb_table('local_recompletion_com');
+
+        // Adding fields to table local_recompletion_outcomp.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('courseid', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('gradefinal', XMLDB_TYPE_NUMBER, '10,5', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecompleted', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timesynced', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NULL, null, null);
+        $table->add_field('synced', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table local_recompletion_outcomp.
+        $table->add_key('id', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table local_recompletion_outcomp.
+        $table->add_index('recomp_com_use_ix', XMLDB_INDEX_NOTUNIQUE, array('userid'));
+        $table->add_index('recomp_com_cou_ix', XMLDB_INDEX_NOTUNIQUE, array('courseid'));
+
+        // Conditionally launch create table for local_recompletion_outcomp.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Recompletion savepoint reached.
+        upgrade_plugin_savepoint(true, 2020071700, 'local', 'recompletion');
+    }
+
     if ($oldversion < 2020082800) {
 
         // Define table local_recompletion_reset to be created.
@@ -572,6 +602,7 @@ function xmldb_local_recompletion_upgrade($oldversion) {
         $table->add_index('userid_courseid_index', XMLDB_INDEX_UNIQUE, ['userid', 'courseid']);
 
         // Conditionally launch create table for local_recompletion_reset.
+
         if (!$dbman->table_exists($table)) {
             $dbman->create_table($table);
         }

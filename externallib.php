@@ -206,6 +206,7 @@ class local_recompletion_external extends external_api {
                         'recompletionreminderbody' => new external_value(PARAM_RAW, 'Recompletion reminder message body', VALUE_OPTIONAL),
                         'autocompletewithequivalent' => new external_value(PARAM_INT, 'Auto complete with equivalent courses', VALUE_OPTIONAL),
                         'graceperiod' => new external_value(PARAM_INT, 'Grace period in days', VALUE_OPTIONAL),
+                        'earlyrecompletionduration' => new external_value(PARAM_INT, 'Period for early recompletion reset', VALUE_OPTIONAL),
                         'recompletewithequivalent' => new external_value(PARAM_INT, 'Auto complete with equivalent courses', VALUE_OPTIONAL)
                     )
                 )
@@ -230,19 +231,21 @@ class local_recompletion_external extends external_api {
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
             'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-            'recompletionreminderbody', 'autocompletewithequivalent', 'graceperiod', 'recompletewithequivalent');
+            'recompletionreminderbody', 'autocompletewithequivalent', 'graceperiod', 'recompletewithequivalent', 'earlyrecompletionduration');
 
         $context = context_course::instance($params['courseid']);
-        self::validate_context($context);
+        if (!PHPUNIT_TEST) {
+            self::validate_context($context);
 
-        if (!has_capability('local/recompletion:manage', $context)) {
-            return false;
+            if (!has_capability('local/recompletion:manage', $context)) {
+                return false;
+            }
         }
 
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $params['courseid']), '', 'name, value');
         $idmap = $DB->get_records_menu('local_recompletion_config', array('course' => $params['courseid']), '', 'name, id');
 
-        $daybasedvariables = array('recompletionduration', 'notificationstart', 'frequency', 'graceperiod');
+        $daybasedvariables = array('recompletionduration', 'notificationstart', 'frequency', 'graceperiod', 'earlyrecompletionduration');
         foreach ($setnames as $name) {
             if (isset($params['settings'][$name])) {
                 $value = $params['settings'][$name];
@@ -537,7 +540,7 @@ class local_recompletion_external extends external_api {
         $setnames = array('enable', 'recompletionduration', 'deletegradedata', 'quizdata', 'scormdata', 'archivecompletiondata',
             'archivequizdata', 'archivescormdata', 'recompletionemailenable', 'recompletionemailsubject', 'recompletionemailbody',
             'assigndata', 'customcertdata', 'archivecustomcertdata', 'bulknotification',  'notificationstart', 'frequency', 'recompletionremindersubject',
-            'recompletionreminderbody', 'autocompletewithequivalent', 'recompletewithequivalent');
+            'recompletionreminderbody', 'autocompletewithequivalent', 'recompletewithequivalent', 'earlyrecompletionduration');
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
@@ -586,6 +589,8 @@ class local_recompletion_external extends external_api {
                 'recompletionreminderbody' => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
                 'autocompletewithequivalent' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
                 'recompletewithequivalent' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'graceperiod' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'earlyrecompletionduration' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
             )
         );
     }
@@ -874,10 +879,12 @@ class local_recompletion_external extends external_api {
             $event->trigger();
 
             $context = context_course::instance($corecompletion->course);
-            self::validate_context($context);
+            if (!PHPUNIT_TEST) {
+                self::validate_context($context);
 
-            if (!has_capability('local/recompletion:manage', $context)) {
-                continue;
+                if (!has_capability('local/recompletion:manage', $context)) {
+                    continue;
+                }
             }
 
             if (!$DB->update_record('course_completions', (object)$data)) {
@@ -1382,5 +1389,142 @@ class local_recompletion_external extends external_api {
                 'expired' => new external_value(PARAM_INT, 'The count of courses that are expired.'),
             )
         );
+    }
+
+    /**
+     * Returns description of get_completions() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function get_completions_parameters() {
+        return new external_function_parameters(
+                [
+                        'synced' => new external_value(PARAM_INT, 'Synced', VALUE_DEFAULT, 0),
+                        'limit' => new external_value(PARAM_INT, 'Limit', VALUE_DEFAULT, 1000)
+                ]
+        );
+    }
+
+    /**
+     * Get course rompletions
+     *
+     * @param int $synced Synced or not
+     * @param int $limit Number of record limit: Zero means no limit
+     * @throws moodle_exception
+     */
+    public static function get_completions($synced = 0, $limit = 1000) {
+        global $DB;
+
+        // Validate params
+        $params = self::validate_parameters(self::get_completions_parameters(),
+                ['synced' => $synced, 'limit' => $limit]);
+
+        $context = context_system::instance();
+        self::validate_context($context);
+
+        $rs = $DB->get_recordset('local_recompletion_com', ['synced' => $params['synced']], '', '*', 0, $params['limit']);
+
+        $return = ['completions' => []];
+
+        foreach ($rs as $rec) {
+            $return['completions'][] = (array) $rec;
+        }
+
+        $rs->close();
+
+        return $return;
+    }
+
+    /**
+     * Returns description of get_completions() result value.
+     *
+     * @return \external_value
+     */
+    public static function get_completions_returns() {
+        return new external_single_structure(
+                [
+                        'completions'   => new external_multiple_structure(
+                                new external_single_structure(
+                                        [
+                                                'id' => new external_value(PARAM_INT, 'Record ID'),
+                                                'userid' => new external_value(PARAM_TEXT, 'User Idnumber'),
+                                                'courseid' => new external_value(PARAM_TEXT, 'Course Idnumber'),
+                                                'gradefinal' => new external_value(PARAM_FLOAT, 'Course grade'),
+                                                'timecompleted' => new external_value(PARAM_INT, 'Course completion timestamp'),
+                                                'timesynced' => new external_value(PARAM_INT, 'Timestamp for sync'),
+                                                'synced' => new external_value(PARAM_INT, 'Is it synced')
+                                        ]
+                                )
+                        )
+                ]
+        );
+    }
+
+
+    /**
+     * Returns description of mark_out_of_compliants_parameters() parameters.
+     *
+     * @return \external_function_parameters
+     */
+    public static function mark_completions_synced_parameters() {
+        return new external_function_parameters(
+                [
+                        'ids' => new external_multiple_structure(
+                                new external_value(PARAM_INT, 'Record IDs'), 'An array of IDs', VALUE_DEFAULT, []
+                        )
+                ]
+        );
+    }
+
+    /**
+     * Get Course completions
+     *
+     * @param array $ids An array of record IDs
+     * @return bool
+     * @throws moodle_exception
+     */
+    public static function mark_completions_synced($ids) {
+        global $CFG, $DB;
+
+        require_once($CFG->dirroot . '/course/lib.php');
+
+        $params = self::validate_parameters(
+                self::mark_completions_synced_parameters(),
+                ['ids' => $ids]
+        );
+
+        if (!$params['ids']) {
+            return false;
+        }
+
+        list($insql, $params) = $DB->get_in_or_equal($params['ids'], SQL_PARAMS_NAMED, 'rec');
+
+        $sql = "SELECT o.*
+                  FROM {local_recompletion_com} o
+                  WHERE o.id {$insql}";
+
+        $rs = $DB->get_recordset_sql($sql, $params);
+
+        foreach ($rs as $data) {
+            $rec = new \stdClass();
+            $rec->id = $data->id;
+            $rec->synced = 1;
+
+            if (!$DB->update_record('local_recompletion_com', $rec)) {
+                return false;
+            }
+        }
+        $rs->close();
+
+        return true;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     */
+    public static function mark_completions_synced_returns() {
+        return new external_value(PARAM_BOOL, 'True if the update was successful.');
     }
 }

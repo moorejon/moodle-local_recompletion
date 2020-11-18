@@ -227,6 +227,24 @@
             <INDEX NAME="useridcourseid" UNIQUE="false" FIELDS="userid, courseid"/>
         </INDEXES>
     </TABLE>
+    <TABLE NAME="local_recompletion_com" COMMENT="local_recompletion_com table">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="18" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="courseid" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="gradefinal" TYPE="number" LENGTH="10" NOTNULL="false" SEQUENCE="false" DECIMALS="5" COMMENT="The final grade for the course (included regardless of whether a passing grade was required)"/>
+        <FIELD NAME="timecompleted" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="timesynced" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="synced" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="id" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="recomp_com_use_ix" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="recomp_com_cou_ix" UNIQUE="false" FIELDS="courseid"/>
+      </INDEXES>
+    </TABLE>
     <TABLE NAME="local_recompletion_reset" COMMENT="Used for tracking resets of incomplete courses">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>

@@ -234,10 +234,12 @@ class local_recompletion_external extends external_api {
             'recompletionreminderbody', 'autocompletewithequivalent', 'graceperiod', 'recompletewithequivalent', 'earlyrecompletionduration');
 
         $context = context_course::instance($params['courseid']);
-        self::validate_context($context);
+        if (!PHPUNIT_TEST) {
+            self::validate_context($context);
 
-        if (!has_capability('local/recompletion:manage', $context)) {
-            return false;
+            if (!has_capability('local/recompletion:manage', $context)) {
+                return false;
+            }
         }
 
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $params['courseid']), '', 'name, value');
@@ -877,10 +879,12 @@ class local_recompletion_external extends external_api {
             $event->trigger();
 
             $context = context_course::instance($corecompletion->course);
-            self::validate_context($context);
+            if (!PHPUNIT_TEST) {
+                self::validate_context($context);
 
-            if (!has_capability('local/recompletion:manage', $context)) {
-                continue;
+                if (!has_capability('local/recompletion:manage', $context)) {
+                    continue;
+                }
             }
 
             if (!$DB->update_record('course_completions', (object)$data)) {
@@ -1500,13 +1504,11 @@ class local_recompletion_external extends external_api {
                   WHERE o.id {$insql}";
 
         $rs = $DB->get_recordset_sql($sql, $params);
-        $synctime = time();
 
         foreach ($rs as $data) {
             $rec = new \stdClass();
             $rec->id = $data->id;
             $rec->synced = 1;
-            $rec->timesynced = $synctime;
 
             if (!$DB->update_record('local_recompletion_com', $rec)) {
                 return false;

@@ -724,10 +724,7 @@ class local_recompletion_lib_testcase extends advanced_testcase {
      * Test early recompletion duration functionality
      */
     public function test_early_recompletion_duration() {
-        global $DB, $CFG;
-
-        $this->resetAfterTest();
-        $this->setAdminUser();
+        global $DB;
 
         $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
 
@@ -781,6 +778,60 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->assertCount(0, $completions);
         $modulecompletions = $DB->get_records('course_modules_completion');
         $this->assertCount(0, $modulecompletions);
+    }
+
+    public function test_synced_record_cleanup() {
+        global $DB, $CFG;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+        $user = $this->getDataGenerator()->create_user();
+
+        $completionrecord = new stdClass();
+        $completionrecord->userid = $user->id;
+        $completionrecord->courseid = $course->id;
+        $thirtyonedaysago = time() - 60 * 60 * 24 * 31;
+        $completionrecord->timecompleted = $thirtyonedaysago;
+        $completionrecord->timesynced = $thirtyonedaysago;
+        $completionrecord->synced = 0;
+        $DB->insert_record('local_recompletion_com', $completionrecord);
+
+        $completions = \local_recompletion_external::get_completions();
+        $this->assertCount(1, $completions);
+
+        $outcomprecord = new stdClass();
+        $outcomprecord->userid = $user->id;
+        $outcomprecord->courseid = $course->id;
+        $outcomprecord->timesynced = $thirtyonedaysago;
+        $outcomprecord->synced = 0;
+        $DB->insert_record('local_recompletion_outcomp', $outcomprecord);
+
+        $outofcomps = \local_recompletion_external::get_out_of_compliants();
+        $this->assertCount(1, $outofcomps);
+
+        $task = new \local_recompletion\task\remove_old_synced();
+        $task->execute();
+
+        $completions = \local_recompletion_external::get_completions();
+        $this->assertCount(1, $completions['completions']);
+        $outofcomps = \local_recompletion_external::get_out_of_compliants();
+        $this->assertCount(1, $outofcomps['outofcompliants']);
+
+        $ids = array('ids' => $completions['completions'][0]['id']);
+        \local_recompletion_external::mark_completions_synced($ids);
+
+        $ids = array('ids' => $outofcomps['outofcompliants'][0]['id']);
+        \local_recompletion_external::mark_out_of_compliants($ids);
+
+        $task = new \local_recompletion\task\remove_old_synced();
+        $task->execute();
+
+        $completions = \local_recompletion_external::get_completions();
+        $this->assertEmpty($completions['completions']);
+        $outofcomps = \local_recompletion_external::get_out_of_compliants();
+        $this->assertEmpty($outofcomps['outofcompliants']);
     }
 
     /**

@@ -99,8 +99,13 @@ class helper {
         return $DB->get_record_sql($sql, $params, IGNORE_MULTIPLE);
     }
 
-    public static function get_user_course_due_date($userid, $courseid, $usecachedvalues = false, $graceperiod = false) {
+    public static function get_user_course_due_date($userid, $courseid, $usecachedvalues = false, $graceperiod = true) {
         global $DB;
+
+        static $duedates = array();
+        if (!PHPUNIT_TEST && isset($duedates[$courseid][$userid])) {
+            return $duedates[$courseid][$userid];
+        }
 
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $courseid), '', 'name, value');
         $duedate = false;
@@ -128,6 +133,8 @@ class helper {
                 }
             }
         }
+
+        $duedates[$courseid][$userid] = $duedate;
 
         return $duedate;
     }

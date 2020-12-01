@@ -571,7 +571,7 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         \local_recompletion_external::create_course_equivalent($course->id, $equivalentcourse2->id, false);
 
         $duedate = $timecompleted + (3 * DAYSECS);
-        $calculateddue = \local_recompletion\helper::get_user_course_due_date($user->id, $course->id, false, false);
+        $calculateddue = \local_recompletion\helper::get_user_course_due_date($user->id, $course->id, false, true);
         $this->assertEquals($duedate, $calculateddue);
     }
 
@@ -586,11 +586,33 @@ class local_recompletion_lib_testcase extends advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
         $equivalentcourse1 = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
-        $equivalentcourse2 = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+        $course2 = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
 
         $user = $this->getDataGenerator()->create_user();
 
-        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $settings = array(
+                'enable' => 1,
+                'recompletionduration' => 3, // 3 days.
+                'deletegradedata' => 1,
+                'quizdata' => 1,
+                'scormdata' => 0,
+                'archivecompletiondata' => 1,
+                'archivequizdata' => 1,
+                'archivescormdata' => 1,
+                'recompletionemailenable' => 1,
+                'recompletionemailsubject' => '',
+                'recompletionemailbody' => '',
+                'assigndata' => 1,
+                'customcertdata' => 1,
+                'archivecustomcertdata' => 1,
+                'bulknotification' => 0,
+                'notificationstart' => 3, // 1 day.
+                'frequency' => 1, // 1 day
+                'recompletionremindersubject' => '',
+                'recompletionreminderbody' => '',
+                'graceperiod' => 3
+        );
+        \local_recompletion_external::update_course_settings($course->id, $settings);
 
         $settings = array(
                 'enable' => 1,
@@ -614,14 +636,39 @@ class local_recompletion_lib_testcase extends advanced_testcase {
                 'recompletionreminderbody' => '',
                 'graceperiod' => 3
         );
-        \local_recompletion_external::update_course_settings($course->id, $settings);
+        \local_recompletion_external::update_course_settings($equivalentcourse1->id, $settings);
+
+        $settings = array(
+                'enable' => 1,
+                'recompletionduration' => 3, // 3 days.
+                'deletegradedata' => 1,
+                'quizdata' => 1,
+                'scormdata' => 0,
+                'archivecompletiondata' => 1,
+                'archivequizdata' => 1,
+                'archivescormdata' => 1,
+                'recompletionemailenable' => 1,
+                'recompletionemailsubject' => '',
+                'recompletionemailbody' => '',
+                'assigndata' => 1,
+                'customcertdata' => 1,
+                'archivecustomcertdata' => 1,
+                'bulknotification' => 0,
+                'notificationstart' => 3, // 1 day.
+                'frequency' => 1, // 1 day
+                'recompletionremindersubject' => '',
+                'recompletionreminderbody' => '',
+                'graceperiod' => 3
+        );
+        \local_recompletion_external::update_course_settings($course2->id, $settings);
 
         \local_recompletion_external::create_course_equivalent($course->id, $equivalentcourse1->id, false);
-        \local_recompletion_external::create_course_equivalent($course->id, $equivalentcourse2->id, false);
 
-        $pluginname = 'manual';
-        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student', $pluginname);
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $equivalentcourse1->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $course2->id, 'student');
 
+        // Check the due date using grace period for the first course
         $enrolinstances = enrol_get_instances($course->id, true);
         foreach ($enrolinstances as $instance) {
             if ($instance->enrol == 'manual') {
@@ -633,6 +680,37 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $duedate = $timestart + (3 * DAYSECS);
         $calculateddue = \local_recompletion\helper::get_user_course_due_date($user->id, $course->id, false, true);
         $this->assertEquals($duedate, $calculateddue);
+
+        // Notification test. Three course enrollments and two should fall within notification period of the grace period
+        $sink = $this->redirectEmails();
+        $task = new local_recompletion\task\check_recompletion();
+        $task->execute();
+
+        // Notification test.
+        $messages = $sink->get_messages();
+        $this->assertCount(5, $messages);
+
+        $stringobj = new stdClass();
+        $stringobj->coursename = $course->fullname;
+        $defaultgracesubject = get_string('recompletiongraceperioddefaultsubject', 'local_recompletion', $stringobj);
+        $this->assertEquals($defaultgracesubject, $messages[0]->subject);
+
+        $stringobj->coursename = $equivalentcourse1->fullname;
+        $defaultgracesubject = get_string('recompletiongraceperioddefaultsubject', 'local_recompletion', $stringobj);
+        $this->assertEquals($defaultgracesubject, $messages[1]->subject);
+
+        $stringobj->coursename = $course2->fullname;
+        $defaultgracesubject = get_string('recompletiongraceperioddefaultsubject', 'local_recompletion', $stringobj);
+        $this->assertEquals($defaultgracesubject, $messages[2]->subject);
+
+        $stringobj->coursename = $course->fullname;
+        $defaultremindsubject = get_string('recompletionreminderdefaultsubject', 'local_recompletion', $stringobj);
+        $this->assertEquals($defaultremindsubject, $messages[3]->subject);
+
+        $stringobj->coursename = $course2->fullname;
+        $defaultremindsubject = get_string('recompletionreminderdefaultsubject', 'local_recompletion', $stringobj);
+        $this->assertEquals($defaultremindsubject, $messages[4]->subject);
+
     }
 
     /**

@@ -91,8 +91,10 @@ class check_recompletion extends \core\task\scheduled_task {
             $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id);
             $lastcompletion =
                     \local_recompletion\helper::get_last_equivalency_completion($user->userid, $user->courseid, $equivalents);
-            $timetorecomplete = \local_recompletion\helper::recomplete_time($lastcompletion->timecompleted, $config);
-            if ($timetorecomplete < $time && $user->timereset < $timetorecomplete) {
+            if ($lastcompletion) {
+                $timetorecomplete = \local_recompletion\helper::recomplete_time($lastcompletion->timecompleted, $config);
+            }
+            if ($lastcompletion && $timetorecomplete < $time && $user->timereset < $timetorecomplete) {
                 $this->reset_user($user->userid, $course, $config);
                 foreach ($equivalents as $equivalent) {
                     $eqvcourse = $this->build_course($equivalent->courseid);
@@ -544,22 +546,13 @@ class check_recompletion extends \core\task\scheduled_task {
                 $config = $this->configs[$course->id];
             }
 
-            $equivalents = \local_recompletion\helper::get_course_equivalencies($course->id, true);
-            list($insql, $inparams) = $DB->get_in_or_equal(array_keys($equivalents));
-            $params = array_merge(array($course->id), $inparams);
+            $params = array($course->id);
 
-            $sql = "SELECT ue.id, ue.userid, MAX(cc.timecompleted) AS timecompleted
+            $sql = "SELECT ue.id, ue.userid
                     FROM {user_enrolments} ue
                     JOIN {enrol} e ON ue.enrolid = e.id
-                  JOIN (SELECT userid, course, timecompleted 
-                        FROM {course_completions}
-                        UNION 
-                        SELECT userid, course, timecompleted
-                        FROM {local_recompletion_cc}) cc ON cc.userid = ue.userid
                  WHERE ue.status = 0 AND e.status = 0
-                   AND cc.timecompleted > 0
                    AND e.courseid = ?
-                   AND cc.course $insql
                    GROUP BY ue.id";
 
             $users = $DB->get_records_sql($sql, $params);
@@ -576,7 +569,9 @@ class check_recompletion extends \core\task\scheduled_task {
 
                 $frequencyday = floor($config->frequency / DAYSECS);
 
-                $dayssincereminderstart = floor(($time - ($expirationdate - $config->notificationstart)) / DAYSECS);
+                $notificationstartdate = helper::get_user_course_notificationstart_date($userinfo->userid, $course->id);
+
+                $dayssincereminderstart = floor(($time - ($notificationstartdate)) / DAYSECS);
 
                 // Haven't reached notification start yet
                 if ($dayssincereminderstart < 0) {
@@ -727,41 +722,49 @@ class check_recompletion extends \core\task\scheduled_task {
     protected function grace_period_inform_users() {
         global $CFG, $DB;
 
-        $sql = "SELECT DISTINCT u.*, lrg.courseid, lrg.timestart, cfggraceperion.value AS graceperiod
-                  FROM {user} u
-                  INNER JOIN {local_recompletion_grace} lrg ON lrg.userid = u.id
-                  INNER JOIN {local_recompletion_config} cfggraceperion ON cfggraceperion.course = lrg.courseid
-                         AND cfggraceperion.name = 'graceperiod'
+        $sql = "SELECT lrg.id as graceid, lrg.courseid, lrg.timestart,  lrg.userid
+                  FROM {local_recompletion_grace} lrg
+                  INNER JOIN {user} u ON lrg.userid = u.id
                   INNER JOIN {enrol} e ON e.courseid = lrg.courseid
                   INNER JOIN {user_enrolments} ue ON ue.enrolid = e.id AND ue.userid = lrg.userid
                   LEFT JOIN {course_completions} cc ON cc.userid = u.id AND cc.course = lrg.courseid
                   LEFT JOIN {local_recompletion_cc} lrcc ON lrcc.userid = u.id AND lrcc.course = lrg.courseid
                   WHERE (cc.id IS NULL OR cc.timecompleted IS NULL) AND lrcc.id IS NULL
-                  AND e.enrol NOT IN ('auto', 'self')";
+                  AND e.enrol NOT IN ('auto', 'self')
+                  GROUP BY lrg.id";
 
-        $users = $DB->get_records_sql($sql);
+        $records = $DB->get_records_sql($sql);
 
-        $courses = [];
-        foreach ($users as $userrecord) {
-            if (!isset($courses[$userrecord->courseid])) {
-                // Only get the course record for this course once.
-                $course = get_course($userrecord->courseid);
-                $courses[$userrecord->courseid] = $course;
+        $users = [];
+        foreach ($records as $record) {
+            // Only get the course record for this course once.
+            $course = $this->build_course($record->courseid);
+            // Get recompletion config.
+            $config = $this->build_config($record->courseid);
+
+            if (empty($config->graceperiod)) {
+                continue;
+            }
+
+            if (isset($users[$record->userid])) {
+                $user = $users[$record->userid];
             } else {
-                $course = $courses[$userrecord->courseid];
+                $user = $DB->get_record('user', ['id' => $record->userid]);
+                $users[$record->userid] = $user;
             }
 
             $context = \context_course::instance($course->id);
             $from = $CFG->supportname;
+
             $a = new \stdClass();
             $a->coursename = format_string($course->fullname, true, array('context' => $context));
-            $a->fullname = fullname($userrecord);
+            $a->fullname = fullname($user);
             $a->link = course_get_url($course)->out();
-            $a->graceperiod = date('F j, Y', ($userrecord->timestart + $userrecord->graceperiod));
+            $a->graceperiod = date('F j, Y', ($record->timestart + $config->graceperiod));
             $messagetext = get_string('recompletiongraceperioddefaultbody', 'local_recompletion', $a);
             $messagehtml = text_to_html($messagetext, null, false, true);
             $subject = get_string('recompletiongraceperioddefaultsubject', 'local_recompletion', $a);
-            $this->recompletion_email_to_user($course->id, $userrecord, $from, $subject, $messagetext, $messagehtml);
+            $this->recompletion_email_to_user($course->id, $user, $from, $subject, $messagetext, $messagehtml);
         }
         $DB->delete_records('local_recompletion_grace');
     }

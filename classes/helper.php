@@ -129,7 +129,7 @@ class helper {
             if ($timestart) {
                 $graceperiodtime = $timestart + $config['graceperiod'];
             }
-            if (empty($duedate)) {
+            if (empty($duedate) && !empty($graceperiodtime)) {
                 $duedate = $graceperiodtime;
             }
         }

@@ -121,16 +121,16 @@ class helper {
                 } else {
                     $duedate = (int)$cache->latestcomp + (int)$config['recompletionduration'];
                 }
-                if ($graceperiod && !empty($config['graceperiod'])) {
-                    $timestart = self::get_user_course_timestart($userid, $courseid);
-                    $graceperiodtime = 0;
-                    if ($timestart) {
-                        $graceperiodtime = $timestart + $config['graceperiod'];
-                    }
-                    if (empty($duedate)) {
-                        $duedate = $graceperiodtime;
-                    }
-                }
+            }
+        }
+        if ($graceperiod && !empty($config['graceperiod'])) {
+            $timestart = self::get_user_course_timestart($userid, $courseid);
+            $graceperiodtime = 0;
+            if ($timestart) {
+                $graceperiodtime = $timestart + $config['graceperiod'];
+            }
+            if (empty($duedate)) {
+                $duedate = $graceperiodtime;
             }
         }
 

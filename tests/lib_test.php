@@ -770,6 +770,62 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->assertEquals($duedate, $calculateddue);
     }
 
+    /**
+     * Test grace period due dates functionality
+     */
+    public function test_grace_period_with_recompletion_disabled() {
+        global $DB, $CFG;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+
+        $user = $this->getDataGenerator()->create_user();
+
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+
+        $settings = array(
+                'enable' => 0,
+                'recompletionduration' => 3, // 3 days.
+                'deletegradedata' => 1,
+                'quizdata' => 1,
+                'scormdata' => 0,
+                'archivecompletiondata' => 1,
+                'archivequizdata' => 1,
+                'archivescormdata' => 1,
+                'recompletionemailenable' => 1,
+                'recompletionemailsubject' => '',
+                'recompletionemailbody' => '',
+                'assigndata' => 1,
+                'customcertdata' => 1,
+                'archivecustomcertdata' => 1,
+                'bulknotification' => 0,
+                'notificationstart' => 1, // 1 day.
+                'frequency' => 1, // 1 day
+                'recompletionremindersubject' => '',
+                'recompletionreminderbody' => '',
+                'graceperiod' => 3
+        );
+        \local_recompletion_external::update_course_settings($course->id, $settings);
+
+        // Make sure grace period calculates even though recompletion is disabled
+        $timestart = \local_recompletion\helper::get_user_course_timestart($user->id, $course->id);
+        $duedate = $timestart + ($settings['graceperiod'] * DAYSECS);
+        $calculateddue = \local_recompletion\helper::get_user_course_due_date($user->id, $course->id, false, true);
+        $this->assertEquals($duedate, $calculateddue);
+
+        // Now check if grace period still calculates if a completion is present
+        $this->create_course_completion($course);
+        $this->complete_course($course, $user);
+        $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $course->id]);
+        $timecompleted = time();
+        $corecompletion->timecompleted = $timecompleted;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion]);
+        $calculateddue = \local_recompletion\helper::get_user_course_due_date($user->id, $course->id, false, true);
+        $this->assertFalse($calculateddue);
+    }
+
     public function test_course_completion_webservice () {
         global $DB;
 

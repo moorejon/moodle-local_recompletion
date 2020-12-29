@@ -809,10 +809,21 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         );
         \local_recompletion_external::update_course_settings($course->id, $settings);
 
+        // Make sure grace period calculates even though recompletion is disabled
         $timestart = \local_recompletion\helper::get_user_course_timestart($user->id, $course->id);
         $duedate = $timestart + ($settings['graceperiod'] * DAYSECS);
         $calculateddue = \local_recompletion\helper::get_user_course_due_date($user->id, $course->id, false, true);
         $this->assertEquals($duedate, $calculateddue);
+
+        // Now check if grace period still calculates if a completion is present
+        $this->create_course_completion($course);
+        $this->complete_course($course, $user);
+        $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $course->id]);
+        $timecompleted = time();
+        $corecompletion->timecompleted = $timecompleted;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion]);
+        $calculateddue = \local_recompletion\helper::get_user_course_due_date($user->id, $course->id, false, true);
+        $this->assertFalse($calculateddue);
     }
 
     public function test_course_completion_webservice () {

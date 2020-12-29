@@ -109,12 +109,12 @@ class helper {
 
         $config = $DB->get_records_menu('local_recompletion_config', array('course' => $courseid), '', 'name, value');
         $duedate = false;
+        $equivalents = \local_recompletion\helper::get_course_equivalencies($courseid);
+        $completiondatetime =
+                \local_recompletion\helper::get_last_equivalency_completion($userid, $courseid, $equivalents);
         if (isset($config['enable']) && $config['enable']) {
             if (isset($config['recompletionduration']) && $config['recompletionduration']) {
                 if (!$usecachedvalues || !$cache = $DB->get_record('local_recompletion_cc_cached', ['userid'=>$userid, 'courseid'=>$courseid])) {
-                    $equivalents = \local_recompletion\helper::get_course_equivalencies($courseid);
-                    $completiondatetime =
-                            \local_recompletion\helper::get_last_equivalency_completion($userid, $courseid, $equivalents);
                     if ($completiondatetime) {
                         $duedate = (int) $completiondatetime->timecompleted + (int) $config['recompletionduration'];
                     }
@@ -123,7 +123,7 @@ class helper {
                 }
             }
         }
-        if ($graceperiod && !empty($config['graceperiod'])) {
+        if ($graceperiod && !empty($config['graceperiod']) && empty($completiondatetime)) {
             $timestart = self::get_user_course_timestart($userid, $courseid);
             $graceperiodtime = 0;
             if ($timestart) {

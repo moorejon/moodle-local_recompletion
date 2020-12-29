@@ -124,6 +124,7 @@ class check_recompletion extends \core\task\scheduled_task {
             LEFT JOIN {local_recompletion_config} r4 ON r4.course = cc.course AND r4.name = 'earlyrecompletionduration'
             JOIN {course} c ON c.id = cc.course
             WHERE c.enablecompletion = ".COMPLETION_ENABLED." AND cc.timecompleted > 0 AND
+            ".$DB->sql_cast_char2int('r2.value')." > 0 AND
             (
             ((cc.timecompleted + ".$DB->sql_cast_char2int('r2.value')." - ".$DB->sql_cast_char2int('r3.value').") < ?)
             OR 

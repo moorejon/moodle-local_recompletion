@@ -1042,24 +1042,30 @@ class local_recompletion_lib_testcase extends advanced_testcase {
 
         $this->create_course_completion($course);
 
+        $time = time() - (5 * DAYSECS);
         $this->complete_course($course, $user);
         $corecompletion1 = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $course->id]);
-        $timecompleted1 = time() - (5 * DAYSECS);
+        $timecompleted1 = $time;
         $corecompletion1->timecompleted = $timecompleted1;
         \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
 
         // Completion is set, now try using an older completion time
-        $corecompletion1->timecompleted = time() - (6 * DAYSECS);
+        $corecompletion1->timecompleted = $time - (2 * DAYSECS);
+        $this->expectExceptionMessage("error/newcorecompletionolderthanexisting");
+        \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
+
+        // Added a 24 hour allowance, try using the oldest completion time within the allowance
+        $corecompletion1->timecompleted = $time - (1 * DAYSECS);
         $this->expectExceptionMessage("error/newcorecompletionolderthanexisting");
         \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
 
         // Now let's set timestart to 0 to simulate a completion created via webservice
-        $corecompletion1->timecompleted = $timecompleted1 = time() - (5 * DAYSECS);
+        $corecompletion1->timecompleted = $time;
         $corecompletion1->timestarted = 0;
         \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
 
         // Trying to set an older date now that it is a webservice completion
-        $corecompletion1->timecompleted = time() - (6 * DAYSECS);
+        $corecompletion1->timecompleted = $time - (2 * DAYSECS);
         \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
 
         // Verify it changed

@@ -855,6 +855,82 @@ class local_recompletion_lib_testcase extends advanced_testcase {
     }
 
     /**
+     * Test cache reset and completion fix tasks
+     */
+    public function test_cache_reset_and_completion_fix_tasks() {
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+        $user1 = $this->getDataGenerator()->create_user();
+        $user2 = $this->getDataGenerator()->create_user();
+        $user3 = $this->getDataGenerator()->create_user();
+        $user4 = $this->getDataGenerator()->create_user();
+        $user5 = $this->getDataGenerator()->create_user();
+
+        $this->getDataGenerator()->enrol_user($user1->id, $course->id, 'student');
+        $this->getDataGenerator()->enrol_user($user2->id, $course->id, 'student');
+        $this->getDataGenerator()->enrol_user($user3->id, $course->id, 'student');
+        $this->getDataGenerator()->enrol_user($user4->id, $course->id, 'student');
+        $this->getDataGenerator()->enrol_user($user5->id, $course->id, 'student');
+        $this->create_course_completion($course);
+        $this->complete_course($course, $user1);
+        $this->complete_course($course, $user2);
+        $this->complete_course($course, $user3);
+        $this->complete_course($course, $user4);
+        $this->complete_course($course, $user5);
+
+        $nullrecords = $DB->get_records_select('course_completions', 'timecompleted IS NULL');
+        $zerorecords = $DB->get_records_select('course_completions', 'timecompleted = 0');
+        $this->assertCount(5, $nullrecords);
+        $this->assertCount(0, $zerorecords);
+
+        $repairtask = new \local_recompletion\task\repair_completions();
+        $repairtask->execute();
+
+        // Nothing should be changed from prior to running the task
+        $nullrecords = $DB->get_records_select('course_completions', 'timecompleted IS NULL');
+        $zerorecords = $DB->get_records_select('course_completions', 'timecompleted = 0');
+        $this->assertCount(5, $nullrecords);
+        $this->assertCount(0, $zerorecords);
+
+        foreach ($nullrecords as $record) {
+            $record->timecompleted = 0;
+            $DB->update_record('course_completions', $record);
+        }
+
+        // There should be 5 zero records now
+        $nullrecords = $DB->get_records_select('course_completions', 'timecompleted IS NULL');
+        $zerorecords = $DB->get_records_select('course_completions', 'timecompleted = 0');
+        $this->assertCount(0, $nullrecords);
+        $this->assertCount(5, $zerorecords);
+
+        $repairtask->execute();
+
+        // The zero records should now be repaired and should be 5 null records now
+        $nullrecords = $DB->get_records_select('course_completions', 'timecompleted IS NULL');
+        $zerorecords = $DB->get_records_select('course_completions', 'timecompleted = 0');
+        $this->assertCount(5, $nullrecords);
+        $this->assertCount(0, $zerorecords);
+
+        foreach ($nullrecords as $record) {
+            $record->timecompleted = 1600000000;
+            $DB->update_record('course_completions', $record);
+        }
+
+        $cachetask = new \local_recompletion\task\cache_completions();
+        $cachetask->execute();
+
+        $cachedrecords = $DB->get_records('local_recompletion_cc_cached');
+        $this->assertCount(5, $cachedrecords);
+
+        $cleartask = new \local_recompletion\task\reset_completion_cache();
+        $cleartask->execute();
+
+        $cachedrecords = $DB->get_records('local_recompletion_cc_cached');
+        $this->assertEmpty($cachedrecords);
+    }
+
+    /**
      * Test early recompletion duration functionality
      */
     public function test_early_recompletion_duration() {

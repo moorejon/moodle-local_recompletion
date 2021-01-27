@@ -178,3 +178,5 @@ $string['removeoldsynced'] = 'Synchronised records cleanup';
 $string['recompletewithequivalent'] = 'Reset incomplete courses based on dates from equivalent courses';
 $string['earlyrecompletionduration'] = 'Early recompletion duration';
 $string['earlyrecompletionduration_help'] = 'Duration to reset a course early without sending out notifications';
+$string['resetcompletioncache'] = 'Reset completion cache';
+$string['repaircompletions'] = 'Repair completions';

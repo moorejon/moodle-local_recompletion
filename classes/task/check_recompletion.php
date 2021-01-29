@@ -29,6 +29,8 @@ use local_recompletion\helper;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once($CFG->dirroot . '/lib/grade/grade_item.php');
+
 /**
  * Check for users that need to recomplete.
  *

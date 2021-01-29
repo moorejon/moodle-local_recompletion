@@ -27,6 +27,8 @@ namespace local_recompletion;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once($CFG->dirroot . '/lib/grade/grade_item.php');
+
 /**
  * Class observer
  *

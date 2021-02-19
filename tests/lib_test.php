@@ -587,6 +587,7 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
         $equivalentcourse1 = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
         $course2 = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+        $course3 = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
 
         $user = $this->getDataGenerator()->create_user();
 
@@ -661,12 +662,14 @@ class local_recompletion_lib_testcase extends advanced_testcase {
                 'graceperiod' => 3
         );
         \local_recompletion_external::update_course_settings($course2->id, $settings);
+        \local_recompletion_external::update_course_settings($course3->id, $settings);
 
         \local_recompletion_external::create_course_equivalent($course->id, $equivalentcourse1->id, false);
 
         $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
         $this->getDataGenerator()->enrol_user($user->id, $equivalentcourse1->id, 'student');
         $this->getDataGenerator()->enrol_user($user->id, $course2->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $course3->id, 'student', 'manual', 0, 0, ENROL_USER_SUSPENDED);
 
         // Check the due date using grace period for the first course
         $enrolinstances = enrol_get_instances($course->id, true);

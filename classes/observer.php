@@ -110,7 +110,7 @@ class observer {
         global $DB;
 
         $data = $event->get_data();
-        $sql = "SELECT ue.id, GREATEST(ue.timecreated, ue.timestart) as timestart FROM {user_enrolments} ue 
+        $sql = "SELECT ue.id, GREATEST(ue.timecreated, ue.timestart) as timestart, ue.status FROM {user_enrolments} ue 
                 INNER JOIN {enrol} e ON e.id = ue.enrolid
                 INNER JOIN {course} c ON c.id = e.courseid
                 INNER JOIN {local_recompletion_config} rc2 ON rc2.course = c.id AND rc2.name = 'graceperiod' AND rc2.value > '0'
@@ -119,15 +119,17 @@ class observer {
         $userenrolments = $DB->get_records_sql($sql, array($data['courseid'], $data['relateduserid']));
 
         if ($userenrolments && count($userenrolments) == 1) {
-            $grace = (object) [
-                'userid' => $data['relateduserid'],
-                'courseid' => $data['courseid'],
-                'timestart' => $userenrolments[$data['objectid']]->timestart
-            ];
-            try {
-                $DB->insert_record('local_recompletion_grace', $grace);
-            } catch (\dml_exception $exception) {
-                // Ignore a duplicate.
+            if ($userenrolments[$data['objectid']]->status == ENROL_USER_ACTIVE) {
+                $grace = (object) [
+                        'userid' => $data['relateduserid'],
+                        'courseid' => $data['courseid'],
+                        'timestart' => $userenrolments[$data['objectid']]->timestart
+                ];
+                try {
+                    $DB->insert_record('local_recompletion_grace', $grace);
+                } catch (\dml_exception $exception) {
+                    // Ignore a duplicate.
+                }
             }
         }
     }

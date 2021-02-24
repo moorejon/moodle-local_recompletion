@@ -77,7 +77,7 @@ class out_of_compliance extends \core\task\scheduled_task {
 
         foreach ($courses as $courseid) {
             $course = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
-            $users = get_enrolled_users(\context_course::instance($courseid));
+            $users = get_enrolled_users(\context_course::instance($courseid), '', 0, 'u.*', null, 0, 0, true);
 
             if (empty($users)) {
                 continue;

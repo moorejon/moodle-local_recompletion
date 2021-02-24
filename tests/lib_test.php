@@ -1074,6 +1074,8 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $incompletecourse = $this->getDataGenerator()->create_course(['idnumber' => 8, 'enablecompletion' => 1]);
         // Course with no equivalents (grace period)
         $incompletecoursegrace = $this->getDataGenerator()->create_course(['idnumber' => 9, 'enablecompletion' => 1]);
+        // Course with suspended enrollment
+        $suspendedcourse = $this->getDataGenerator()->create_course(['idnumber' => 10, 'enablecompletion' => 1]);
 
         $user = $this->getDataGenerator()->create_user(['idnumber' => 'xyz']);
 
@@ -1107,6 +1109,7 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         \local_recompletion_external::update_course_settings($completeunicourse2->id, $settings);
         \local_recompletion_external::update_course_settings($completecourse->id, $settings);
         \local_recompletion_external::update_course_settings($incompletecourse->id, $settings);
+        \local_recompletion_external::update_course_settings($suspendedcourse->id, $settings);
 
         $settings = array(
                 'enable' => 1,
@@ -1145,6 +1148,7 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->getDataGenerator()->enrol_user($user->id, $completecourse->id, 'student');
         $this->getDataGenerator()->enrol_user($user->id, $incompletecourse->id, 'student');
         $this->getDataGenerator()->enrol_user($user->id, $incompletecoursegrace->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $suspendedcourse->id, 'student', 'manual', 0, 0, ENROL_USER_SUSPENDED);
 
         $this->create_course_completion($completenonunicourse);
         $this->create_course_completion($completeunicourse1);

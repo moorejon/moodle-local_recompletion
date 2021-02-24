@@ -61,7 +61,7 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->complete_course($course, $user);
 
         $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $course->id]);
-        $timecompleted = time() - (3 * DAYSECS + 2 * HOURSECS);
+        $timecompleted = time() - (3 * DAYSECS);
         $corecompletion->timecompleted = $timecompleted;
 
         \local_recompletion_external::update_core_completion([(array) $corecompletion]);
@@ -131,7 +131,7 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->complete_course($equivalentcourse, $user);
 
         $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $equivalentcourse->id]);
-        $timecompleted = time() - (3 * DAYSECS + 2 * HOURSECS);
+        $timecompleted = time() - (3 * DAYSECS);
         $corecompletion->timecompleted = $timecompleted;
 
         \local_recompletion_external::update_core_completion([(array) $corecompletion]);
@@ -221,12 +221,12 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->complete_course($equivalentcourse2, $user);
 
         $corecompletion1 = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $equivalentcourse1->id]);
-        $timecompleted1 = time() - (5 * DAYSECS + 2 * HOURSECS);
+        $timecompleted1 = time() - (5 * DAYSECS);
         $corecompletion1->timecompleted = $timecompleted1;
         \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
 
         $corecompletion2 = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $equivalentcourse2->id]);
-        $timecompleted2 = time() - (3 * DAYSECS + 2 * HOURSECS);
+        $timecompleted2 = time() - (3 * DAYSECS);
         $corecompletion2->timecompleted = $timecompleted2;
         \local_recompletion_external::update_core_completion([(array) $corecompletion2]);
 
@@ -419,7 +419,7 @@ class local_recompletion_lib_testcase extends advanced_testcase {
 
 
         $corecompletion1 = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $equivalentcourse1->id]);
-        $timecompleted1 = time() - (5 * DAYSECS + 2 * HOURSECS);
+        $timecompleted1 = time() - (5 * DAYSECS);
         $corecompletion1->timecompleted = $timecompleted1;
         \local_recompletion_external::update_core_completion([(array) $corecompletion1]);
 
@@ -1051,6 +1051,140 @@ class local_recompletion_lib_testcase extends advanced_testcase {
         $this->assertCount(1, $completions);
         $modulecompletions = $DB->get_records('course_modules_completion');
         $this->assertCount(1, $modulecompletions);
+    }
+
+    public function test_outcomp_task() {
+        global $DB, $CFG;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // Non-Unidirectional equivalent courses, one complete one incomplete
+        $incompletenonunicourse = $this->getDataGenerator()->create_course(['idnumber' => 1, 'enablecompletion' => 1]);
+        $completenonunicourse = $this->getDataGenerator()->create_course(['idnumber' => 2, 'enablecompletion' => 1]);
+        // Unidirectional - equivalent courses, one complete, one incomplete, incomplete is equivalent
+        $incompleteunicourse1 = $this->getDataGenerator()->create_course(['idnumber' => 3, 'enablecompletion' => 1]);
+        $completeunicourse1 = $this->getDataGenerator()->create_course(['idnumber' => 4, 'enablecompletion' => 1]);
+        // Unidirectional - equivalent courses, one complete, one incomplete, incomplete is NOT equivalant
+        $incompleteunicourse2 = $this->getDataGenerator()->create_course(['idnumber' => 5, 'enablecompletion' => 1]);
+        $completeunicourse2 = $this->getDataGenerator()->create_course(['idnumber' => 6, 'enablecompletion' => 1]);
+        // Course with no equivalents (complete)
+        $completecourse = $this->getDataGenerator()->create_course(['idnumber' => 7, 'enablecompletion' => 1]);
+        // Course with no equivalents (incomplete)
+        $incompletecourse = $this->getDataGenerator()->create_course(['idnumber' => 8, 'enablecompletion' => 1]);
+        // Course with no equivalents (grace period)
+        $incompletecoursegrace = $this->getDataGenerator()->create_course(['idnumber' => 9, 'enablecompletion' => 1]);
+
+        $user = $this->getDataGenerator()->create_user(['idnumber' => 'xyz']);
+
+        $settings = array(
+                'enable' => 1,
+                'recompletionduration' => 3, // 3 days.
+                'deletegradedata' => 1,
+                'quizdata' => 1,
+                'scormdata' => 0,
+                'archivecompletiondata' => 1,
+                'archivequizdata' => 1,
+                'archivescormdata' => 1,
+                'recompletionemailenable' => 1,
+                'recompletionemailsubject' => '',
+                'recompletionemailbody' => '',
+                'assigndata' => 1,
+                'customcertdata' => 1,
+                'archivecustomcertdata' => 1,
+                'bulknotification' => 0,
+                'notificationstart' => 3, // 1 day.
+                'frequency' => 1, // 1 day
+                'recompletionremindersubject' => '',
+                'recompletionreminderbody' => '',
+                'graceperiod' => 0
+        );
+        \local_recompletion_external::update_course_settings($incompletenonunicourse->id, $settings);
+        \local_recompletion_external::update_course_settings($completenonunicourse->id, $settings);
+        \local_recompletion_external::update_course_settings($incompleteunicourse1->id, $settings);
+        \local_recompletion_external::update_course_settings($completeunicourse1->id, $settings);
+        \local_recompletion_external::update_course_settings($incompleteunicourse2->id, $settings);
+        \local_recompletion_external::update_course_settings($completeunicourse2->id, $settings);
+        \local_recompletion_external::update_course_settings($completecourse->id, $settings);
+        \local_recompletion_external::update_course_settings($incompletecourse->id, $settings);
+
+        $settings = array(
+                'enable' => 1,
+                'recompletionduration' => 3, // 3 days.
+                'deletegradedata' => 1,
+                'quizdata' => 1,
+                'scormdata' => 0,
+                'archivecompletiondata' => 1,
+                'archivequizdata' => 1,
+                'archivescormdata' => 1,
+                'recompletionemailenable' => 1,
+                'recompletionemailsubject' => '',
+                'recompletionemailbody' => '',
+                'assigndata' => 1,
+                'customcertdata' => 1,
+                'archivecustomcertdata' => 1,
+                'bulknotification' => 0,
+                'notificationstart' => 3, // 1 day.
+                'frequency' => 1, // 1 day
+                'recompletionremindersubject' => '',
+                'recompletionreminderbody' => '',
+                'graceperiod' => 3
+        );
+        \local_recompletion_external::update_course_settings($incompletecoursegrace->id, $settings);
+
+        \local_recompletion_external::create_course_equivalent($incompletenonunicourse->id, $completenonunicourse->id, false);
+        \local_recompletion_external::create_course_equivalent($incompleteunicourse1->id, $completeunicourse1->id, true);
+        \local_recompletion_external::create_course_equivalent($completeunicourse2->id, $incompleteunicourse2->id, true);
+
+        $this->getDataGenerator()->enrol_user($user->id, $incompletenonunicourse->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $completenonunicourse->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $incompleteunicourse1->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $completeunicourse1->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $incompleteunicourse2->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $completeunicourse2->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $completecourse->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $incompletecourse->id, 'student');
+        $this->getDataGenerator()->enrol_user($user->id, $incompletecoursegrace->id, 'student');
+
+        $this->create_course_completion($completenonunicourse);
+        $this->create_course_completion($completeunicourse1);
+        $this->create_course_completion($completeunicourse2);
+        $this->create_course_completion($completecourse);
+
+        $this->complete_course($completenonunicourse, $user);
+        $this->complete_course($completeunicourse1, $user);
+        $this->complete_course($completeunicourse2, $user);
+        $this->complete_course($completecourse, $user);
+
+        $timecompleted = time() - (2 * DAYSECS);
+
+        $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $completenonunicourse->id]);
+        $corecompletion->timecompleted = $timecompleted;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion]);
+
+        $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $completeunicourse1->id]);
+        $corecompletion->timecompleted = $timecompleted;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion]);
+
+        $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $completeunicourse2->id]);
+        $corecompletion->timecompleted = $timecompleted;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion]);
+
+        $corecompletion = $DB->get_record('course_completions', ['userid' => $user->id, 'course' => $completecourse->id]);
+        $corecompletion->timecompleted = $timecompleted;
+        \local_recompletion_external::update_core_completion([(array) $corecompletion]);
+
+        $task = new \local_recompletion\task\out_of_compliance();
+        $task->execute();
+
+        $records = $DB->get_records('local_recompletion_outcomp');
+
+        // Should only have two out of compliance courses. Idnumbers should match the out of compliance courses
+        $this->assertCount(2, $records);
+        $record = array_shift($records);
+        $this->assertEquals($incompleteunicourse2->idnumber, $record->courseid);
+        $record = array_shift($records);
+        $this->assertEquals($incompletecourse->idnumber, $record->courseid);
     }
 
     public function test_synced_record_cleanup() {

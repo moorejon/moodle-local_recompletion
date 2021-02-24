@@ -93,11 +93,10 @@ class out_of_compliance extends \core\task\scheduled_task {
             // Get all of its equivalent courses.
             $equivalents = \local_recompletion\helper::get_course_equivalencies($courseid, true);
 
-            $params = array($courseid);
             list($courseinsql, $courseinparams) = $DB->get_in_or_equal(array_keys($equivalents));
             list($userinsql, $userinparams) = $DB->get_in_or_equal(array_keys($users));
 
-            $params = array_merge($params, $courseinparams, $userinparams);
+            $params = array_merge($courseinparams, $userinparams);
 
             // Find last completion.
             $sql = "SELECT u.id as userid, MAX(comp.timecompleted) as timecompleted
@@ -106,9 +105,8 @@ class out_of_compliance extends \core\task\scheduled_task {
                        FROM {course_completions} AS cc
                        UNION
                        SELECT *, '1' AS archived
-                       FROM {local_recompletion_cc} AS lc) comp ON comp.userid = u.id
-                 WHERE comp.course $courseinsql
-                   AND u.id $userinsql
+                       FROM {local_recompletion_cc} AS lc) comp ON comp.userid = u.id AND comp.course $courseinsql
+                 WHERE u.id $userinsql
               GROUP BY u.id";
 
             $rs = $DB->get_recordset_sql($sql, $params);
